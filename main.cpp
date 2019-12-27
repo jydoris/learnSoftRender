@@ -23,7 +23,7 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 		isSteep = true;
 	}
 
-	if (p0.m_y > p1.m_y) {
+	if (p0.m_x > p1.m_x) {
 		std::swap(p0.m_x, p1.m_x);
 		std::swap(p0.m_y, p1.m_y);
 	}
@@ -45,7 +45,9 @@ std::vector<location> vertex  = {
 	location(1, 1),
 	location(20, 50),
 	location(30, 30),
-	location(1, 1)
+	location(1, 1),
+	location(1, 30),
+	location(30, 1)
 };
 
 int main(int argc, char** argv) {
