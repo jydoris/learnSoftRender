@@ -1,3 +1,4 @@
+#include <vector>
 #include "tgaimage.h"
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 255);
@@ -26,10 +27,11 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 		std::swap(p0.m_x, p1.m_x);
 		std::swap(p0.m_y, p1.m_y);
 	}
-	
+
+	float k = (float) (p1.m_y - p0.m_y) / (p1.m_x - p0.m_x);
+	float y = p0.m_y;
 	for (int x = p0.m_x; x <= p1.m_x; x++) {
-		float t = (float)(x - p0.m_x) / (p1.m_x - p0.m_x);
-		int y = p0.m_y * (1.0 - t) + p1.m_y * t;
+		y += k;
 		if (isSteep)
 			image.set(y, x, color);
 		else
@@ -39,11 +41,20 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 	
 }
 
+std::vector<location> vertex  = {
+	location(1, 1),
+	location(20, 50),
+	location(30, 30),
+	location(1, 1)
+};
+
 int main(int argc, char** argv) {
 	TGAImage image(100, 100, TGAImage::RGB);
-	location p0(1, 1);
-	location p1(20, 50);
-	line(p1, p0, image, green);
+	
+	for(int i = 0; i < vertex.size(); i+=2)
+		line(vertex[i], vertex[i+1], image, green);
+
+
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga"); 
 		return 0;
