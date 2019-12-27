@@ -13,27 +13,27 @@ struct location
 
 void line(location p0, location p1, TGAImage &image, TGAColor color) {
 	
+	bool isSteep = false;
+
+	//transpose the line by axis y = x
 	if (std::abs(p1.m_y - p0.m_y) > std::abs(p1.m_x - p0.m_x)) {
-		if (p0.m_y > p1.m_y) {
-			std::swap(p0.m_x, p1.m_x);
-			std::swap(p0.m_y, p1.m_y);
-		}
-		for (int y = p0.m_y; y <= p1.m_y; y++) {
-			float t = (float)(y - p0.m_y) / (p1.m_y - p0.m_y);
-			int x = p0.m_x * (1.0 - t) + p1.m_x * t;
-			image.set(x, y, color);
-		}
+		std::swap(p0.m_x, p0.m_y);
+		std::swap(p1.m_x, p1.m_y);
+		isSteep = true;
 	}
-	else {
-		if (p0.m_x > p1.m_x) {
-			std::swap(p0.m_x, p1.m_x);
-			std::swap(p0.m_y, p1.m_y);
-		}
-		for (int x = p0.m_x; x <= p1.m_x; x++) {
-			float t = (float)(x - p0.m_x) / (p1.m_x - p0.m_x);
-			int y = p0.m_y * (1.0 - t) + p1.m_y * t;
+
+	if (p0.m_y > p1.m_y) {
+		std::swap(p0.m_x, p1.m_x);
+		std::swap(p0.m_y, p1.m_y);
+	}
+	
+	for (int x = p0.m_x; x <= p1.m_x; x++) {
+		float t = (float)(x - p0.m_x) / (p1.m_x - p0.m_x);
+		int y = p0.m_y * (1.0 - t) + p1.m_y * t;
+		if (isSteep)
+			image.set(y, x, color);
+		else
 			image.set(x, y, color);
-		}
 	}
 
 	
