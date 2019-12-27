@@ -1,0 +1,6 @@
+/Debug
+/release
+*.vcxproj
+*.filters
+*.user
+*.tga
