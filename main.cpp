@@ -60,10 +60,10 @@ int main(int argc, char** argv) {
 	TGAImage image(width, height, TGAImage::RGB);
 
 
-	Model *model = new Model("obj/african_head.obj");
+	/*Model *model = new Model("obj/african_head.obj");
 
 
-	for (int i = 0; i<model->nfaces(); i++) {
+	for (int i = 0; i < model->nfaces(); i++) {
 		std::vector<int> face = model->face(i);
 
 		Vec3f v0 = model->vert(face[0]);
@@ -73,7 +73,14 @@ int main(int argc, char** argv) {
 			location((v1.x + 1.)*width / 2., (v1.y + 1.)*width / 2.),
 			location((v2.x + 1.)*width / 2., (v2.y + 1.)*width / 2.),
 			image, green);
-	}
+	}*/
+
+	location t0[3] = { location(10, 70),   location(50, 160),  location(70, 80) };
+	location t1[3] = { location(180, 50),  location(150, 1),   location(70, 180) };
+	location t2[3] = { location(180, 150), location(120, 160), location(130, 180) };
+	triangle(t0[0], t0[1], t0[2], image, white);
+	triangle(t1[0], t1[1], t1[2], image, green);
+	triangle(t2[0], t2[1], t2[2], image, red);
 
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
