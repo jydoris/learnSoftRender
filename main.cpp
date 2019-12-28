@@ -47,8 +47,13 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 			accuIncre -= 2.0 * dx;   //adjust the accumulate increase, its always based on the new height
 		}
 	}
-
 	
+}
+
+void triangle(location p0, location p1, location p2, TGAImage &image, TGAColor color) {
+	line(p0, p1, image, color);
+	line(p1, p2, image, color);
+	line(p2, p0, image, color);
 }
 
 int main(int argc, char** argv) {
@@ -60,15 +65,14 @@ int main(int argc, char** argv) {
 
 	for (int i = 0; i<model->nfaces(); i++) {
 		std::vector<int> face = model->face(i);
-		for (int j = 0; j<3; j++) {
-			Vec3f v0 = model->vert(face[j]);
-			Vec3f v1 = model->vert(face[(j + 1) % 3]);
-			int x0 = (v0.x + 1.)*width / 2.;
-			int y0 = (v0.y + 1.)*height / 2.;
-			int x1 = (v1.x + 1.)*width / 2.;
-			int y1 = (v1.y + 1.)*height / 2.;
-			line(location(x0, y0), location(x1, y1), image, white);
-		}
+
+		Vec3f v0 = model->vert(face[0]);
+		Vec3f v1 = model->vert(face[1]);
+		Vec3f v2 = model->vert(face[2]);
+		triangle(location((v0.x + 1.)*width / 2., (v0.y + 1.)*width / 2.),
+			location((v1.x + 1.)*width / 2., (v1.y + 1.)*width / 2.),
+			location((v2.x + 1.)*width / 2., (v2.y + 1.)*width / 2.),
+			image, green);
 	}
 
 
