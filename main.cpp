@@ -28,14 +28,21 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 		std::swap(p0.m_y, p1.m_y);
 	}
 
-	float k = (float) (p1.m_y - p0.m_y) / (p1.m_x - p0.m_x);
-	float y = p0.m_y;
-	for (int x = p0.m_x; x <= p1.m_x; x++) {
+	int dy = p1.m_y - p0.m_y;
+	int dx = p1.m_x - p0.m_x;
+	float unitIncre = std::abs(dy / (float) dx);
+	float accuIncre = 0;
+	for (int x = p0.m_x, y = p0.m_y; x <= p1.m_x; x++) {
 		if (isSteep)
 			image.set(y, x, color);
 		else
 			image.set(x, y, color);
-		y += k;
+		
+		accuIncre += unitIncre;
+		if (accuIncre > 0.5) { //need to increase or decrease y now, rather than stay at y
+			y += (dy > 0 ? 1 : -1);
+			accuIncre -= 1.0;   //adjust the accumulate increase, its always based on the new height
+		}
 	}
 
 	
