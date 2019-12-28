@@ -31,11 +31,11 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 	float k = (float) (p1.m_y - p0.m_y) / (p1.m_x - p0.m_x);
 	float y = p0.m_y;
 	for (int x = p0.m_x; x <= p1.m_x; x++) {
-		y += k;
 		if (isSteep)
 			image.set(y, x, color);
 		else
 			image.set(x, y, color);
+		y += k;
 	}
 
 	
