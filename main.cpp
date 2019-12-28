@@ -30,7 +30,7 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 
 	int dy = p1.m_y - p0.m_y;
 	int dx = p1.m_x - p0.m_x;
-	float unitIncre = 2 * std::abs(dy / (float) dx);
+	int unitIncre = 2 * std::abs(dy);
 	float accuIncre = 0;
 	for (int x = p0.m_x, y = p0.m_y; x <= p1.m_x; x++) {
 		if (isSteep)
@@ -39,9 +39,9 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 			image.set(x, y, color);
 		
 		accuIncre += unitIncre;
-		if (accuIncre > 1.0) { //need to increase or decrease y now, rather than stay at y
+		if (accuIncre > dx) { //need to increase or decrease y now, rather than stay at y
 			y += (dy > 0 ? 1 : -1);
-			accuIncre -= 2.0;   //adjust the accumulate increase, its always based on the new height
+			accuIncre -= 2.0 * dx;   //adjust the accumulate increase, its always based on the new height
 		}
 	}
 
