@@ -51,9 +51,43 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 }
 
 void triangle(location p0, location p1, location p2, TGAImage &image, TGAColor color) {
-	line(p0, p1, image, color);
-	line(p1, p2, image, color);
-	line(p2, p0, image, color);
+	if(p0.m_y > p1.m_y) {
+		std::swap(p0, p1);
+	}
+	if(p0.m_y > p2.m_y){
+		std::swap(p0, p2);
+	}
+	if (p1.m_y > p2.m_y) {
+		std::swap(p1, p2);
+	}
+
+	float k1 = (p1.m_y - p0.m_y) / (float)(p1.m_x - p0.m_x);
+	float k2 = (p2.m_y - p0.m_y) / (float)(p2.m_x - p0.m_x);
+
+	for (int y = p0.m_y; y <= p1.m_y; y++) {
+		int start = p0.m_x + (y - p0.m_y) / k1;
+		int end = p0.m_x + (y - p0.m_y) / k2;
+		if (start > end) {
+			std::swap(start, end);
+		}
+		for (int j = start; j <= end; j++) {
+			image.set(j, y, green);
+		}
+		
+	}
+
+	float k3 = (p2.m_y - p1.m_y) / (float)(p2.m_x - p1.m_x);
+	for (int y = p1.m_y; y <= p2.m_y; y++) {
+		int start = p1.m_x + (y - p1.m_y) / k3;
+		int end = p0.m_x + (y - p0.m_y) / k2;
+		if (start > end) {
+			std::swap(start, end);
+		}
+		for (int j = start; j <= end; j++) {
+			image.set(j, y, red);
+		}
+
+	}
 }
 
 int main(int argc, char** argv) {
