@@ -69,31 +69,18 @@ void triangle(location p0, location p1, location p2, TGAImage &image, TGAColor c
 
 	float total_height = p2.m_y - p0.m_y;
 
-	for (int y = p0.m_y; y <= p1.m_y; y++) {
-		float segment_height = p1.m_y - p0.m_y + 0.01; //avoid zero
-		int start = p0.m_x + (y - p0.m_y) / segment_height * (p1.m_x - p0.m_x);
-		int end = p0.m_x + (y - p0.m_y) / total_height * (p2.m_x - p0.m_x);
+	for (int y = 0; y <= total_height; y++) {
+		bool secondPart = (y + p0.m_y >= p1.m_y) ? true : false;
+		float segment_height = secondPart ? p2.m_y - p1.m_y + 0.01 : p1.m_y - p0.m_y + 0.01; //avoid zero
+		int start = secondPart ? p1.m_x + (y + p0.m_y - p1.m_y) / segment_height * (p2.m_x - p1.m_x) : p0.m_x + y / segment_height * (p1.m_x - p0.m_x);
+		int end = p0.m_x + y / total_height * (p2.m_x - p0.m_x);
 		if (start > end) {
 			std::swap(start, end);
 		}
 		for (int j = start; j <= end; j++) {
-			image.set(j, y, color);
+			image.set(j, y + p0.m_y, color);
 		}
 		
-	}
-
-	float k3 = (p2.m_y - p1.m_y) / (float)(p2.m_x - p1.m_x);
-	for (int y = p1.m_y; y <= p2.m_y; y++) {
-		float segment_height = p2.m_y - p1.m_y + 0.01 ; //avoid zero
-		int start = p1.m_x + (y - p1.m_y) / segment_height * (p2.m_x - p1.m_x);
-		int end = p0.m_x + (y - p0.m_y) / total_height * (p2.m_x - p0.m_x);
-		if (start > end) {
-			std::swap(start, end);
-		}
-		for (int j = start; j <= end; j++) {
-			image.set(j, y, color);
-		}
-
 	}
 }
 
@@ -116,13 +103,13 @@ int main(int argc, char** argv) {
 			image, green);
 	}*/
 
-	location p0[3] = { location(10, 70),   location(50, 70),  location(70, 80) };
-	/*location p1[3] = { location(150, 50),  location(150, 1),   location(70, 180) };
-	location p2[3] = { location(180, 150), location(120, 160), location(130, 180) };*/
+	location p0[3] = { location(0, 0),   location(1, 100),  location(100, 100) };
+	location p1[3] = { location(100, 100),  location(100, 199),   location(199, 199) };
+	location p2[3] = { location(100, 100), location(199, 100), location(175, 75) };
 	triangle(p0[0], p0[1], p0[2], image, white);
-	/*triangle(p1[0], p1[1], p1[2], image, green);
+	triangle(p1[0], p1[1], p1[2], image, green);
 	triangle(p2[0], p2[1], p2[2], image, red);
-*/
+
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga"); 
