@@ -88,27 +88,35 @@ int main(int argc, char** argv) {
 	TGAImage image(width, height, TGAImage::RGB);
 
 
-	/*Model *model = new Model("obj/african_head.obj");
+	Model *model = new Model("obj/african_head.obj");
 
 
+	Vec3f light_dir = Vec3f(0, 0, 1);
 	for (int i = 0; i < model->nfaces(); i++) {
 		std::vector<int> face = model->face(i);
 
-		Vec3f v0 = model->vert(face[0]);
-		Vec3f v1 = model->vert(face[1]);
-		Vec3f v2 = model->vert(face[2]);
-		triangle(location((v0.x + 1.)*width / 2., (v0.y + 1.)*width / 2.),
-			location((v1.x + 1.)*width / 2., (v1.y + 1.)*width / 2.),
-			location((v2.x + 1.)*width / 2., (v2.y + 1.)*width / 2.),
-			image, green);
-	}*/
+		Vec3f world_coord[3];
+		location screen_coord[3];
+		for (int j = 0; j < 3; j++) {
+			world_coord[j] = model->vert(face[j]);
+			screen_coord[j] = location((world_coord[j].x + 1.)*width / 2., (world_coord[j].y + 1.)*width / 2.);
+		}
 
-	location p0[3] = { location(0, 0),   location(1, 100),  location(100, 100) };
+		Vec3f norm = (world_coord[0] - world_coord[1]) ^ (world_coord[0] - world_coord[2]);
+		norm.normalize();
+		float tensity = norm * light_dir;
+
+		if (tensity > 0){
+			triangle(screen_coord[0], screen_coord[1], screen_coord[2], image, TGAColor(tensity * 255, tensity * 255, tensity * 255, 255));
+		}
+	}
+
+	/*location p0[3] = { location(0, 0),   location(1, 100),  location(100, 100) };
 	location p1[3] = { location(100, 100),  location(100, 199),   location(199, 199) };
 	location p2[3] = { location(100, 100), location(199, 100), location(175, 75) };
 	triangle(p0[0], p0[1], p0[2], image, white);
 	triangle(p1[0], p1[1], p1[2], image, green);
-	triangle(p2[0], p2[1], p2[2], image, red);
+	triangle(p2[0], p2[1], p2[2], image, red);*/
 
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
