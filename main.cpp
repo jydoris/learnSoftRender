@@ -4,8 +4,9 @@
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 255);
 const TGAColor green = TGAColor(0, 255, 0, 255);
-const int width = 200;
-const int height = 200;
+const TGAColor blue = TGAColor(0, 0, 255, 255);
+const int width = 800;
+const int height = 800;
 
 struct location
 {
@@ -84,11 +85,29 @@ void triangle(location p0, location p1, location p2, TGAImage &image, TGAColor c
 	}
 }
 
+void rasterization(location p0, location p1, TGAImage &image, int yBuffer[], TGAColor color) {
+	if (p0.m_x > p1.m_x) {
+		std::swap(p0, p1);
+	}
+
+	for (int x = p0.m_x; x <= p1.m_x; x++) {
+		float t = (x - p0.m_x) / (float)(p1.m_x - p0.m_x);
+		int y = p0.m_y * (1.0 - t) + p1.m_y * t;
+		if (y > yBuffer[x]) {
+			yBuffer[x] = y;
+			for (int j = 0; j < 20; j++)
+			{
+				image.set(x, j, color);
+			}
+		}
+	}
+}
+
 int main(int argc, char** argv) {
-	TGAImage image(width, height, TGAImage::RGB);
+	TGAImage scene(width, 50, TGAImage::RGB);
 
 
-	Model *model = new Model("obj/african_head.obj");
+	/*Model *model = new Model("obj/african_head.obj");
 
 
 	Vec3f light_dir = Vec3f(0, 0, 1);
@@ -109,17 +128,18 @@ int main(int argc, char** argv) {
 		if (tensity > 0){
 			triangle(screen_coord[0], screen_coord[1], screen_coord[2], image, TGAColor(tensity * 255, tensity * 255, tensity * 255, 255));
 		}
+	}*/
+
+	int ybuffer[width];
+	for (int i = 0; i < width; i++) {
+		ybuffer[i] = std::numeric_limits<int>::min();
 	}
+	// scene "2d mesh"
+	rasterization(location(20, 34), location(744, 400), scene, ybuffer, red);
+	rasterization(location(120, 434), location(444, 400), scene, ybuffer, green);
+	rasterization(location(330, 463), location(594, 200), scene, ybuffer, blue);
 
-	/*location p0[3] = { location(0, 0),   location(1, 100),  location(100, 100) };
-	location p1[3] = { location(100, 100),  location(100, 199),   location(199, 199) };
-	location p2[3] = { location(100, 100), location(199, 100), location(175, 75) };
-	triangle(p0[0], p0[1], p0[2], image, white);
-	triangle(p1[0], p1[1], p1[2], image, green);
-	triangle(p2[0], p2[1], p2[2], image, red);*/
-
-
-	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
-	image.write_tga_file("output.tga"); 
+	scene.flip_vertically(); // i want to have the origin at the left bottom corner of the image
+	scene.write_tga_file("output.tga");
 		return 0;
 }
