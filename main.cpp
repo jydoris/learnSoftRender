@@ -134,7 +134,7 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 			screenPosX = j;
 			screenPosY = y + p0.y;
 
-			Vec3f factor = barycentric(p0, p1, p2, Vec3f(j + 1., y + p0.y, 0)); //value of z axis won't be used
+			Vec3f factor = barycentric(p0, p1, p2, Vec3f(j, y + p0.y, 0)); //value of z axis won't be used
 			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
 			float z = factor[0] * p0.z + factor[1] * p1.z + factor[2] * p2.z;
 
@@ -147,12 +147,85 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 	}
 }
 
+
+Vec3f tex2screen(int twidth, int theight, Vec3f v) {
+	if(v.x < 0.0) v.x = 0.0;
+	if (v.x > 1.0) v.x = 1.0;
+	if (v.y < 0.0) v.y = 0.0;
+	if (v.y > 1.0) v.y = 1.0;
+	return Vec3f(v.x*twidth, v.y*theight, v.z);
+}
+
+void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], float intensity, TGAImage &textureImage, Vec3f tex_coord[]) {
+	if (p0.y == p1.y && p1.y == p2.y) {
+		return;
+	}
+
+	//y increase by p0, p1, p2
+	if (p0.y > p1.y) {
+		std::swap(p0, p1);
+		std::swap(tex_coord[0], tex_coord[1]); //remember to do this, or the color will be not be smooth
+	}
+	if (p0.y > p2.y) {
+		std::swap(p0, p2);
+		std::swap(tex_coord[0], tex_coord[2]);
+	}
+	if (p1.y > p2.y) {
+		std::swap(p1, p2);
+		std::swap(tex_coord[1], tex_coord[2]);
+	}
+
+	float total_height = p2.y - p0.y;
+
+	int screenPosX;
+	int screenPosY;
+
+	for (int y = 0; y <= total_height; y++) {
+		bool secondPart = (y + p0.y >= p1.y) ? true : false;
+		float segment_height = secondPart ? p2.y - p1.y + 0.01 : p1.y - p0.y + 0.01; //avoid zero
+		int start = secondPart ? p1.x + (y + p0.y - p1.y) / segment_height * (p2.x - p1.x) : p0.x + y / segment_height * (p1.x - p0.x);
+		int end = p0.x + y / total_height * (p2.x - p0.x);
+		if (start > end) {
+			std::swap(start, end);
+		}
+
+		for (int j = start; j <= end; j++) {
+			screenPosX = j;
+			screenPosY = y + p0.y;
+
+			Vec3f factor = barycentric(p0, p1, p2, Vec3f(screenPosX, screenPosY, 0)); //value of z axis won't be used
+			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
+			float z = factor[0] * p0.z + factor[1] * p1.z + factor[2] * p2.z;
+
+			Vec3f interTex;
+			for (int i = 0; i < 3; i++) {
+				interTex[i] = factor[0] * tex_coord[0][i] + factor[1] * tex_coord[1][i] + factor[2] * tex_coord[2][i];
+		
+			}
+
+			Vec3f texScreenCoord = tex2screen(textureImage.get_width(), textureImage.get_height(), interTex);
+
+			TGAColor color = textureImage.get(texScreenCoord.x, texScreenCoord.y);
+			if (z > zBuffer[screenPosX][screenPosY]) {
+				image.set(screenPosX, screenPosY, TGAColor(intensity*color[0], intensity*color[1], intensity*color[2]));
+				zBuffer[screenPosX][screenPosY] = z;
+			}
+		}
+
+	}
+}
+
 Vec3f world2screen(Vec3f v) {
 	return Vec3f(int((v.x + 1.)*width / 2. + .5), int((v.y + 1.)*height / 2. + .5), v.z);
 }
 
+
+
 int main(int argc, char** argv) {
 	TGAImage scene(width, height, TGAImage::RGB);
+	TGAImage textureImage;
+	textureImage.read_tga_file("obj/african_head_diffuse.tga");
+	textureImage.flip_vertically();
 
 	
 	for (int i = 0; i < width; i++) {
@@ -166,25 +239,30 @@ int main(int argc, char** argv) {
 	Vec3f light_dir = Vec3f(0, 0, 1);
 	for (int i = 0; i < model->nfaces(); i++) {
 		std::vector<int> face = model->face(i);
+		std::vector<int> texts = model->texures(i);
 
 		Vec3f world_coord[3];
-		location screen_coord[3];
+		Vec3f tex_coord[3];
 		for (int j = 0; j < 3; j++) {
 			world_coord[j] = model->vert(face[j]);
-			screen_coord[j] = location((world_coord[j].x + 1.)*width / 2., (world_coord[j].y + 1.)*height / 2.);
+			tex_coord[j] = model->text(texts[j]);
 		}
 
 		Vec3f norm = cross((world_coord[0] - world_coord[1]), (world_coord[0] - world_coord[2]));
 		norm.normalize();
 		float tensity = norm * light_dir;
-
+		
+		
 		if (tensity > 0){
-			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer, TGAColor(tensity * 255, tensity * 255, tensity * 255, 255));
+			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer,tensity, textureImage, tex_coord);
 		}
 	}
 
 
 	scene.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	scene.write_tga_file("output.tga");
+
+	/*std::cout << "yes" << std::endl;
+	system("pause");*/
 		return 0;
 }
