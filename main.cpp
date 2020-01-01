@@ -7,6 +7,7 @@ const TGAColor green = TGAColor(0, 255, 0, 255);
 const TGAColor blue = TGAColor(0, 0, 255, 255);
 const int width = 800;
 const int height = 800;
+float zbuffer[width][height];
 
 struct location
 {
@@ -15,6 +16,19 @@ struct location
 	location() {}
 	location(int x, int y) { m_x = x; m_y = y; }
 };
+
+Vec3f barycentric(Vec3f A, Vec3f B, Vec3f C, Vec3f P) {
+	Vec3f s[2];
+	for (int i = 2; i--; ) {
+		s[i][0] = C[i] - A[i];
+		s[i][1] = B[i] - A[i];
+		s[i][2] = A[i] - P[i];
+	}
+	Vec3f u = cross(s[0], s[1]);
+	if (std::abs(u[2])>1e-2) // dont forget that u[2] is integer. If it is zero then triangle ABC is degenerate
+		return Vec3f(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+	return Vec3f(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
+}
 
 void line(location p0, location p1, TGAImage &image, TGAColor color) {
 	
@@ -51,6 +65,7 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 	
 }
 
+//no z buffer
 void triangle(location p0, location p1, location p2, TGAImage &image, TGAColor color) {
 
 	if (p0.m_y == p1.m_y && p1.m_y == p2.m_y) {
@@ -85,29 +100,67 @@ void triangle(location p0, location p1, location p2, TGAImage &image, TGAColor c
 	}
 }
 
-void rasterization(location p0, location p1, TGAImage &image, int yBuffer[], TGAColor color) {
-	if (p0.m_x > p1.m_x) {
-		std::swap(p0, p1);
+void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], TGAColor color) {
+	if (p0.y == p1.y && p1.y == p2.y) {
+		return;
 	}
 
-	for (int x = p0.m_x; x <= p1.m_x; x++) {
-		float t = (x - p0.m_x) / (float)(p1.m_x - p0.m_x);
-		int y = p0.m_y * (1.0 - t) + p1.m_y * t;
-		if (y > yBuffer[x]) {
-			yBuffer[x] = y;
-			for (int j = 0; j < 20; j++)
-			{
-				image.set(x, j, color);
+	//y increase by p0, p1, p2
+	if (p0.y > p1.y) {
+		std::swap(p0, p1);
+	}
+	if (p0.y > p2.y) {
+		std::swap(p0, p2);
+	}
+	if (p1.y > p2.y) {
+		std::swap(p1, p2);
+	}
+
+	float total_height = p2.y - p0.y;
+
+	int screenPosX;
+	int screenPosY;
+
+	for (int y = 0; y <= total_height; y++) {
+		bool secondPart = (y + p0.y >= p1.y) ? true : false;
+		float segment_height = secondPart ? p2.y - p1.y + 0.01 : p1.y - p0.y + 0.01; //avoid zero
+		int start = secondPart ? p1.x + (y + p0.y - p1.y) / segment_height * (p2.x - p1.x) : p0.x + y / segment_height * (p1.x - p0.x);
+		int end = p0.x + y / total_height * (p2.x - p0.x);
+		if (start > end) {
+			std::swap(start, end);
+		}
+
+		for (int j = start; j <= end; j++) {
+			screenPosX = j;
+			screenPosY = y + p0.y;
+
+			Vec3f factor = barycentric(p0, p1, p2, Vec3f(j + 1., y + p0.y, 0)); //value of z axis won't be used
+			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
+			float z = factor[0] * p0.z + factor[1] * p1.z + factor[2] * p2.z;
+
+			if (z > zBuffer[screenPosX][screenPosY]) {
+				image.set(screenPosX, screenPosY, color);
+				zBuffer[screenPosX][screenPosY] = z;
 			}
 		}
+
 	}
 }
 
+Vec3f world2screen(Vec3f v) {
+	return Vec3f(int((v.x + 1.)*width / 2. + .5), int((v.y + 1.)*height / 2. + .5), v.z);
+}
+
 int main(int argc, char** argv) {
-	TGAImage scene(width, 50, TGAImage::RGB);
+	TGAImage scene(width, height, TGAImage::RGB);
 
+	
+	for (int i = 0; i < width; i++) {
+		for(int j = 0; j < height; j++)
+			zbuffer[i][j] = -std::numeric_limits<float>::max();
+	}
 
-	/*Model *model = new Model("obj/african_head.obj");
+	Model *model = new Model("obj/african_head.obj");
 
 
 	Vec3f light_dir = Vec3f(0, 0, 1);
@@ -118,26 +171,18 @@ int main(int argc, char** argv) {
 		location screen_coord[3];
 		for (int j = 0; j < 3; j++) {
 			world_coord[j] = model->vert(face[j]);
-			screen_coord[j] = location((world_coord[j].x + 1.)*width / 2., (world_coord[j].y + 1.)*width / 2.);
+			screen_coord[j] = location((world_coord[j].x + 1.)*width / 2., (world_coord[j].y + 1.)*height / 2.);
 		}
 
-		Vec3f norm = (world_coord[0] - world_coord[1]) ^ (world_coord[0] - world_coord[2]);
+		Vec3f norm = cross((world_coord[0] - world_coord[1]), (world_coord[0] - world_coord[2]));
 		norm.normalize();
 		float tensity = norm * light_dir;
 
 		if (tensity > 0){
-			triangle(screen_coord[0], screen_coord[1], screen_coord[2], image, TGAColor(tensity * 255, tensity * 255, tensity * 255, 255));
+			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer, TGAColor(tensity * 255, tensity * 255, tensity * 255, 255));
 		}
-	}*/
-
-	int ybuffer[width];
-	for (int i = 0; i < width; i++) {
-		ybuffer[i] = std::numeric_limits<int>::min();
 	}
-	// scene "2d mesh"
-	rasterization(location(20, 34), location(744, 400), scene, ybuffer, red);
-	rasterization(location(120, 434), location(444, 400), scene, ybuffer, green);
-	rasterization(location(330, 463), location(594, 200), scene, ybuffer, blue);
+
 
 	scene.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	scene.write_tga_file("output.tga");
