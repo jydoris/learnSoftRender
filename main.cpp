@@ -156,6 +156,8 @@ Vec3f tex2screen(int twidth, int theight, Vec3f v) {
 	return Vec3f(v.x*twidth, v.y*theight, v.z);
 }
 
+
+
 void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], float intensity, TGAImage &textureImage, Vec3f tex_coord[]) {
 	if (p0.y == p1.y && p1.y == p2.y) {
 		return;
@@ -208,6 +210,7 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 			TGAColor color = textureImage.get(texScreenCoord.x, texScreenCoord.y);
 			if (z > zBuffer[screenPosX][screenPosY]) {
 				image.set(screenPosX, screenPosY, TGAColor(intensity*color[0], intensity*color[1], intensity*color[2]));
+				
 				zBuffer[screenPosX][screenPosY] = z;
 			}
 		}
@@ -215,10 +218,16 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 	}
 }
 
+
+int cameraPos = 5;
+
 Vec3f world2screen(Vec3f v) {
 	return Vec3f(int((v.x + 1.)*width / 2. + .5), int((v.y + 1.)*height / 2. + .5), v.z);
 }
 
+Vec3f worldPers(Vec3f v) {
+	return Vec3f(v.x / (1. - v.z/cameraPos), v.y / (1. - v.z / cameraPos), v.z / (1. - v.z / cameraPos));
+}
 
 
 int main(int argc, char** argv) {
@@ -252,7 +261,10 @@ int main(int argc, char** argv) {
 		norm.normalize();
 		float tensity = norm * light_dir;
 		
-		
+		for (int j = 0; j < 3; j++) {
+			world_coord[j] = worldPers(world_coord[j]);
+		}
+
 		if (tensity > 0){
 			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer,tensity, textureImage, tex_coord);
 		}
