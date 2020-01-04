@@ -198,11 +198,9 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 			Vec3f factor = barycentric(p0, p1, p2, Vec3f(screenPosX, screenPosY, 0)); //value of z axis won't be used
 			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
 			float z = factor[0] * p0.z + factor[1] * p1.z + factor[2] * p2.z;
-
 			Vec3f interTex;
 			for (int i = 0; i < 3; i++) {
-				interTex[i] = factor[0] * tex_coord[0][i] + factor[1] * tex_coord[1][i] + factor[2] * tex_coord[2][i];
-		
+				interTex[i] = factor[0] * tex_coord[0][i]  + factor[1] * tex_coord[1][i]  + factor[2] * tex_coord[2][i];
 			}
 
 			Vec3f texScreenCoord = tex2screen(textureImage.get_width(), textureImage.get_height(), interTex);
@@ -218,8 +216,24 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 	}
 }
 
-
 int cameraPos = 5;
+
+Vec3f homo2Vec3(Vec4f h){
+	Vec3f v;
+	v[0] = h[0] / h[3];
+	v[1] = h[1] / h[3];
+	v[2] = h[2] / h[3];
+	return v;
+}
+
+Vec4f homoVec(Vec3f v) {
+	Vec4f h;
+	h[0] = v[0];
+	h[1] = v[1];
+	h[2] = v[2];
+	h[3] = 1;
+	return h;
+}
 
 Vec3f world2screen(Vec3f v) {
 	return Vec3f(int((v.x + 1.)*width / 2. + .5), int((v.y + 1.)*height / 2. + .5), v.z);
@@ -261,9 +275,15 @@ int main(int argc, char** argv) {
 		norm.normalize();
 		float tensity = norm * light_dir;
 		
-		for (int j = 0; j < 3; j++) {
+		/*for (int j = 0; j < 3; j++) {
 			world_coord[j] = worldPers(world_coord[j]);
+		}*/
+		Matrix  projection = Matrix::identity();
+		projection[3][2] = -1.0 / cameraPos;
+		for (int j = 0; j < 3; j++) {
+			world_coord[j] = homo2Vec3(projection * homoVec(world_coord[j]));
 		}
+
 
 		if (tensity > 0){
 			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer,tensity, textureImage, tex_coord);
