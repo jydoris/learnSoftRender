@@ -9,6 +9,8 @@ const int width = 800;
 const int height = 800;
 float zbuffer[width][height];
 
+Vec3f light_dir = Vec3f(0, 0, 1);
+
 struct location
 {
 	int m_x;
@@ -158,7 +160,7 @@ Vec3f tex2screen(int twidth, int theight, Vec3f v) {
 
 
 
-void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], float intensity, TGAImage &textureImage, Vec3f tex_coord[]) {
+void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], Vec3f norm_coord[], TGAImage &textureImage, Vec3f tex_coord[]) {
 	if (p0.y == p1.y && p1.y == p2.y) {
 		return;
 	}
@@ -167,14 +169,17 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 	if (p0.y > p1.y) {
 		std::swap(p0, p1);
 		std::swap(tex_coord[0], tex_coord[1]); //remember to do this, or the color will be not be smooth
+		std::swap(norm_coord[0], norm_coord[1]);
 	}
 	if (p0.y > p2.y) {
 		std::swap(p0, p2);
 		std::swap(tex_coord[0], tex_coord[2]);
+		std::swap(norm_coord[0], norm_coord[2]);
 	}
 	if (p1.y > p2.y) {
 		std::swap(p1, p2);
 		std::swap(tex_coord[1], tex_coord[2]);
+		std::swap(norm_coord[1], norm_coord[2]);
 	}
 
 	float total_height = p2.y - p0.y;
@@ -199,14 +204,22 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
 			float z = factor[0] * p0.z + factor[1] * p1.z + factor[2] * p2.z;
 			Vec3f interTex;
+			Vec3f interNorm;
 			for (int i = 0; i < 3; i++) {
 				interTex[i] = factor[0] * tex_coord[0][i]  + factor[1] * tex_coord[1][i]  + factor[2] * tex_coord[2][i];
+				interNorm[i] = factor[0] * norm_coord[0][i] + factor[1] * norm_coord[1][i] + factor[2] * norm_coord[2][i];
 			}
+			
 
+			//texture color
 			Vec3f texScreenCoord = tex2screen(textureImage.get_width(), textureImage.get_height(), interTex);
 
 			TGAColor color = textureImage.get(texScreenCoord.x, texScreenCoord.y);
-			if (z > zBuffer[screenPosX][screenPosY]) {
+
+			//intensit using interpolate norm
+			interNorm.normalize();
+			float intensity = interNorm * light_dir;
+			if (z > zBuffer[screenPosX][screenPosY] && intensity > 0) {
 				image.set(screenPosX, screenPosY, TGAColor(intensity*color[0], intensity*color[1], intensity*color[2]));
 				
 				zBuffer[screenPosX][screenPosY] = z;
@@ -259,21 +272,21 @@ int main(int argc, char** argv) {
 	Model *model = new Model("obj/african_head.obj");
 
 
-	Vec3f light_dir = Vec3f(0, 0, 1);
 	for (int i = 0; i < model->nfaces(); i++) {
-		std::vector<int> face = model->face(i);
-		std::vector<int> texts = model->texures(i);
+		std::vector<Vec3i> face = model->face(i);
 
 		Vec3f world_coord[3];
 		Vec3f tex_coord[3];
+		Vec3f norm_coord[3];
 		for (int j = 0; j < 3; j++) {
-			world_coord[j] = model->vert(face[j]);
-			tex_coord[j] = model->text(texts[j]);
+			world_coord[j] = model->vert(face[j][0]);
+			tex_coord[j] = model->text(face[j][1]);
+			norm_coord[j] = model->norm(face[j][2]);
 		}
 
-		Vec3f norm = cross((world_coord[0] - world_coord[1]), (world_coord[0] - world_coord[2]));
+		/*Vec3f norm = cross((world_coord[0] - world_coord[1]), (world_coord[0] - world_coord[2]));
 		norm.normalize();
-		float tensity = norm * light_dir;
+		float tensity = norm * light_dir;*/
 		
 		/*for (int j = 0; j < 3; j++) {
 			world_coord[j] = worldPers(world_coord[j]);
@@ -284,10 +297,7 @@ int main(int argc, char** argv) {
 			world_coord[j] = homo2Vec3(projection * homoVec(world_coord[j]));
 		}
 
-
-		if (tensity > 0){
-			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer,tensity, textureImage, tex_coord);
-		}
+			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer,norm_coord, textureImage, tex_coord);
 	}
 
 
