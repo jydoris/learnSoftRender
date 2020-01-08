@@ -10,6 +10,26 @@ const int height = 800;
 float zbuffer[width][height];
 Vec3f light_dir = Vec3f(0, 0, 1);
 
+int cameraPos = 2;
+
+Vec3f homo2Vec3(Vec4f h){
+    Vec3f v;
+    v[0] = h[0] / h[3];
+    v[1] = h[1] / h[3];
+    v[2] = h[2] / h[3];
+    return v;
+}
+
+Vec4f homoVec(Vec3f v) {
+    Vec4f h;
+    h[0] = v[0];
+    h[1] = v[1];
+    h[2] = v[2];
+    h[3] = 1;
+    return h;
+}
+
+
 
 Vec3f barycentric(Vec3f A, Vec3f B, Vec3f C, Vec3f P) {
 	Vec3f s[2];
@@ -223,6 +243,11 @@ Vec3f world2screen(Vec3f v) {
 	return Vec3f(int((v.x + 1.)*width / 2. + .5), int((v.y + 1.)*height / 2. + .5), v.z);
 }
 
+Vec3f worldPers(Vec3f v) {
+    return Vec3f(v.x / (1. - v.z/cameraPos), v.y / (1. - v.z / cameraPos), v.z / (1. - v.z / cameraPos));
+}
+
+
 
 
 int main(int argc, char** argv) {
@@ -253,6 +278,14 @@ int main(int argc, char** argv) {
             tex_coord[j] = model->text(face[j][1]);
             norm_coord[j] = model->norm(face[j][2]);
         }
+
+
+        Matrix  projection = Matrix::identity();
+        projection[3][2] = -1.0 / cameraPos;
+        for (int j = 0; j < 3; j++) {
+            world_coord[j] = homo2Vec3(projection * homoVec(world_coord[j]));
+        }
+
 
         rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer, norm_coord, textureImage, tex_coord);
 
