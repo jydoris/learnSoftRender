@@ -1,4 +1,4 @@
-﻿#include <vector>
+#include <vector>
 #include "tgaimage.h"
 #include "model.h"
 const TGAColor white = TGAColor(255, 255, 255, 255);
@@ -207,7 +207,7 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 
 			TGAColor color = textureImage.get(texScreenCoord.x, texScreenCoord.y);
 			if (z > zBuffer[screenPosX][screenPosY]) {
-				image.set(screenPosX, screenPosY, TGAColor(intensity*color[0], intensity*color[1], intensity*color[2]));
+				image.set(screenPosX, screenPosY, TGAColor(intensity*color.r, intensity*color.g, intensity*color.b));
 				zBuffer[screenPosX][screenPosY] = z;
 			}
 		}
@@ -224,7 +224,7 @@ Vec3f world2screen(Vec3f v) {
 int main(int argc, char** argv) {
 	TGAImage scene(width, height, TGAImage::RGB);
 	TGAImage textureImage;
-	textureImage.read_tga_file("obj/african_head_diffuse.tga");
+	textureImage.read_tga_file("/Users/doris/Desktop/GIT/learnSoftRender/obj/african_head_diffuse.tga");
 	textureImage.flip_vertically();
 
 	
@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
 			zbuffer[i][j] = -std::numeric_limits<float>::max();
 	}
 
-	Model *model = new Model("obj/african_head.obj");
+	Model *model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/african_head.obj");
 
 
 	Vec3f light_dir = Vec3f(0, 0, 1);
@@ -261,6 +261,17 @@ int main(int argc, char** argv) {
 
 	scene.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	scene.write_tga_file("output.tga");
+
+    { // dump z-buffer (debugging purposes only)
+        TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
+        for (int i=0; i<width; i++) {
+            for (int j=0; j<height; j++) {
+                zbimage.set(i, j, TGAColor((int)zbuffer[i][j], 1));
+            }
+        }
+        zbimage.flip_vertically(); // i want to have the origin at the left bottom corner of the image
+        zbimage.write_tga_file("zbuffer.tga");
+    }
 
 	/*std::cout << "yes" << std::endl;
 	system("pause");*/
