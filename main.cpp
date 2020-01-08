@@ -9,8 +9,11 @@ const int width = 800;
 const int height = 800;
 float zbuffer[width][height];
 Vec3f light_dir = Vec3f(0, 0, 1);
+Vec3f center = Vec3f(0, 0, 0);
+Vec3f cameraPos = Vec3f(0, -11, 15);
+Matrix ModelView;
+int depth = 255;
 
-int cameraPos = 2;
 
 Vec3f homo2Vec3(Vec4f h){
     Vec3f v;
@@ -28,6 +31,34 @@ Vec4f homoVec(Vec3f v) {
     h[3] = 1;
     return h;
 }
+
+void lookat(Vec3f eye, Vec3f center, Vec3f up) {
+    Vec3f z = (eye - center).normalize();
+    Vec3f x = cross(up, z).normalize();
+    Vec3f y = cross(z, x).normalize();
+    Matrix Minv = Matrix::identity();
+    Matrix Tr = Matrix::identity();
+    for (int i = 0; i<3; i++) {
+        Minv[0][i] = x[i];
+        Minv[1][i] = y[i];
+        Minv[2][i] = z[i];
+        Tr[i][3] = -center[i];
+    }
+    ModelView = Minv * Tr;
+}
+
+Matrix viewport(int x, int y, int w, int h) {
+    Matrix m = Matrix::identity();
+    m[0][3] = x + w / 2.f;
+    m[1][3] = y + h / 2.f;
+    m[2][3] = depth / 2.f;
+
+    m[0][0] = w / 2.f;
+    m[1][1] = h / 2.f;
+    m[2][2] = depth / 2.f;
+    return m;
+}
+
 
 
 
@@ -243,12 +274,6 @@ Vec3f world2screen(Vec3f v) {
 	return Vec3f(int((v.x + 1.)*width / 2. + .5), int((v.y + 1.)*height / 2. + .5), v.z);
 }
 
-Vec3f worldPers(Vec3f v) {
-    return Vec3f(v.x / (1. - v.z/cameraPos), v.y / (1. - v.z / cameraPos), v.z / (1. - v.z / cameraPos));
-}
-
-
-
 
 int main(int argc, char** argv) {
 	TGAImage scene(width, height, TGAImage::RGB);
@@ -279,15 +304,22 @@ int main(int argc, char** argv) {
             norm_coord[j] = model->norm(face[j][2]);
         }
 
+        lookat(cameraPos, center, Vec3f(0, 1, 0));
 
         Matrix  projection = Matrix::identity();
-        projection[3][2] = -1.0 / cameraPos;
+        projection[3][2] = -1.0 / (cameraPos - center).norm();
+
+        Vec3f screen_coord[3];
+        Matrix viewMat = viewport(0, 0, width, height);
+
         for (int j = 0; j < 3; j++) {
-            world_coord[j] = homo2Vec3(projection * homoVec(world_coord[j]));
+//            screen_coord[j] = homo2Vec3(viewMat * projection * ModelView * homoVec(world_coord[j]));
+            screen_coord[j] = homo2Vec3(projection * ModelView * homoVec(world_coord[j]));
+            screen_coord[j] = world2screen(screen_coord[j]);
         }
 
 
-        rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer, norm_coord, textureImage, tex_coord);
+        rasterization(screen_coord[0], screen_coord[1], screen_coord[2], scene, zbuffer, norm_coord, textureImage, tex_coord);
 
 	}
 
