@@ -8,14 +8,8 @@ const TGAColor blue = TGAColor(0, 0, 255, 255);
 const int width = 800;
 const int height = 800;
 float zbuffer[width][height];
+Vec3f light_dir = Vec3f(0, 0, 1);
 
-struct location
-{
-	int m_x;
-	int m_y;
-	location() {}
-	location(int x, int y) { m_x = x; m_y = y; }
-};
 
 Vec3f barycentric(Vec3f A, Vec3f B, Vec3f C, Vec3f P) {
 	Vec3f s[2];
@@ -30,27 +24,27 @@ Vec3f barycentric(Vec3f A, Vec3f B, Vec3f C, Vec3f P) {
 	return Vec3f(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
 }
 
-void line(location p0, location p1, TGAImage &image, TGAColor color) {
+void line(Vec3f p0, Vec3f p1, TGAImage &image, TGAColor color) {
 	
 	bool isSteep = false;
 
 	//transpose the line by axis y = x
-	if (std::abs(p1.m_y - p0.m_y) > std::abs(p1.m_x - p0.m_x)) {
-		std::swap(p0.m_x, p0.m_y);
-		std::swap(p1.m_x, p1.m_y);
+	if (std::abs(p1.y - p0.y) > std::abs(p1.x - p0.x)) {
+		std::swap(p0.x, p0.y);
+		std::swap(p1.x, p1.y);
 		isSteep = true;
 	}
 
-	if (p0.m_x > p1.m_x) {
-		std::swap(p0.m_x, p1.m_x);
-		std::swap(p0.m_y, p1.m_y);
+	if (p0.x > p1.x) {
+		std::swap(p0.x, p1.x);
+		std::swap(p0.y, p1.y);
 	}
 
-	int dy = p1.m_y - p0.m_y;
-	int dx = p1.m_x - p0.m_x;
+	int dy = p1.y - p0.y;
+	int dx = p1.x - p0.x;
 	int unitIncre = 2 * std::abs(dy);
 	float accuIncre = 0;
-	for (int x = p0.m_x, y = p0.m_y; x <= p1.m_x; x++) {
+	for (int x = p0.x, y = p0.y; x <= p1.x; x++) {
 		if (isSteep)
 			image.set(y, x, color);
 		else
@@ -65,41 +59,42 @@ void line(location p0, location p1, TGAImage &image, TGAColor color) {
 	
 }
 
-//no z buffer
-void triangle(location p0, location p1, location p2, TGAImage &image, TGAColor color) {
+//MARK: single Color Triangles
+void triangle(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, TGAColor color) {
 
-	if (p0.m_y == p1.m_y && p1.m_y == p2.m_y) {
+	if (p0.y == p1.y && p1.y == p2.y) {
 		return;
 	}
 
 	//y increase by p0, p1, p2
-	if(p0.m_y > p1.m_y) {
+	if(p0.y > p1.y) {
 		std::swap(p0, p1);
 	}
-	if(p0.m_y > p2.m_y){
+	if(p0.y > p2.y){
 		std::swap(p0, p2);
 	}
-	if (p1.m_y > p2.m_y) {
+	if (p1.y > p2.y) {
 		std::swap(p1, p2);
 	}
 
-	float total_height = p2.m_y - p0.m_y;
+	float total_height = p2.y - p0.y;
 
 	for (int y = 0; y <= total_height; y++) {
-		bool secondPart = (y + p0.m_y >= p1.m_y) ? true : false;
-		float segment_height = secondPart ? p2.m_y - p1.m_y + 0.01 : p1.m_y - p0.m_y + 0.01; //avoid zero
-		int start = secondPart ? p1.m_x + (y + p0.m_y - p1.m_y) / segment_height * (p2.m_x - p1.m_x) : p0.m_x + y / segment_height * (p1.m_x - p0.m_x);
-		int end = p0.m_x + y / total_height * (p2.m_x - p0.m_x);
+		bool secondPart = (y + p0.y >= p1.y) ? true : false;
+		float segment_height = secondPart ? p2.y - p1.y + 0.01 : p1.y - p0.y + 0.01; //avoid zero
+		int start = secondPart ? p1.x + (y + p0.y - p1.y) / segment_height * (p2.x - p1.x) : p0.x + y / segment_height * (p1.x - p0.x);
+		int end = p0.x + y / total_height * (p2.x - p0.x);
 		if (start > end) {
 			std::swap(start, end);
 		}
 		for (int j = start; j <= end; j++) {
-			image.set(j, y + p0.m_y, color);
+			image.set(j, y + p0.y, color);
 		}
 		
 	}
 }
 
+//MARK: triangles without texture
 void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], TGAColor color) {
 	if (p0.y == p1.y && p1.y == p2.y) {
 		return;
@@ -156,7 +151,8 @@ Vec3f tex2screen(int twidth, int theight, Vec3f v) {
 	return Vec3f(v.x*twidth, v.y*theight, v.z);
 }
 
-void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], float intensity, TGAImage &textureImage, Vec3f tex_coord[]) {
+//MARK: triangles with texture and normal
+void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[][height], Vec3f norm_coord[], TGAImage &textureImage, Vec3f tex_coord[]) {
 	if (p0.y == p1.y && p1.y == p2.y) {
 		return;
 	}
@@ -165,14 +161,17 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 	if (p0.y > p1.y) {
 		std::swap(p0, p1);
 		std::swap(tex_coord[0], tex_coord[1]); //remember to do this, or the color will be not be smooth
+        std::swap(norm_coord[0], norm_coord[1]);
 	}
 	if (p0.y > p2.y) {
 		std::swap(p0, p2);
 		std::swap(tex_coord[0], tex_coord[2]);
+        std::swap(norm_coord[0], norm_coord[2]);
 	}
 	if (p1.y > p2.y) {
 		std::swap(p1, p2);
 		std::swap(tex_coord[1], tex_coord[2]);
+        std::swap(norm_coord[1], norm_coord[2]);
 	}
 
 	float total_height = p2.y - p0.y;
@@ -198,15 +197,20 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float zBuffer[
 			float z = factor[0] * p0.z + factor[1] * p1.z + factor[2] * p2.z;
 
 			Vec3f interTex;
+            Vec3f interNorm;
 			for (int i = 0; i < 3; i++) {
 				interTex[i] = factor[0] * tex_coord[0][i] + factor[1] * tex_coord[1][i] + factor[2] * tex_coord[2][i];
-		
+                interNorm[i] = factor[0] * norm_coord[0][i] + factor[1] * norm_coord[1][i] + factor[2] * norm_coord[2][i];
 			}
 
 			Vec3f texScreenCoord = tex2screen(textureImage.get_width(), textureImage.get_height(), interTex);
 
+            //intensit using interpolate norm
+            interNorm.normalize();
+            float intensity = interNorm * light_dir;
+
 			TGAColor color = textureImage.get(texScreenCoord.x, texScreenCoord.y);
-			if (z > zBuffer[screenPosX][screenPosY]) {
+			if (z > zBuffer[screenPosX][screenPosY]  && intensity > 0) {
 				image.set(screenPosX, screenPosY, TGAColor(intensity*color.r, intensity*color.g, intensity*color.b));
 				zBuffer[screenPosX][screenPosY] = z;
 			}
@@ -236,42 +240,28 @@ int main(int argc, char** argv) {
 	Model *model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/african_head.obj");
 
 
-	Vec3f light_dir = Vec3f(0, 0, 1);
+
 	for (int i = 0; i < model->nfaces(); i++) {
-		std::vector<int> face = model->face(i);
-		std::vector<int> texts = model->texures(i);
 
-		Vec3f world_coord[3];
-		Vec3f tex_coord[3];
-		for (int j = 0; j < 3; j++) {
-			world_coord[j] = model->vert(face[j]);
-			tex_coord[j] = model->text(texts[j]);
-		}
+        std::vector<Vec3i> face = model->face(i);
 
-		Vec3f norm = cross((world_coord[0] - world_coord[1]), (world_coord[0] - world_coord[2]));
-		norm.normalize();
-		float tensity = norm * light_dir;
-		
-		
-		if (tensity > 0){
-			rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer,tensity, textureImage, tex_coord);
-		}
+        Vec3f world_coord[3];
+        Vec3f tex_coord[3];
+        Vec3f norm_coord[3];
+        for (int j = 0; j < 3; j++) {
+            world_coord[j] = model->vert(face[j][0]);
+            tex_coord[j] = model->text(face[j][1]);
+            norm_coord[j] = model->norm(face[j][2]);
+        }
+
+        rasterization(world2screen(world_coord[0]), world2screen(world_coord[1]), world2screen(world_coord[2]), scene, zbuffer, norm_coord, textureImage, tex_coord);
+
 	}
 
 
 	scene.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	scene.write_tga_file("output.tga");
 
-    { // dump z-buffer (debugging purposes only)
-        TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
-        for (int i=0; i<width; i++) {
-            for (int j=0; j<height; j++) {
-                zbimage.set(i, j, TGAColor((int)zbuffer[i][j], 1));
-            }
-        }
-        zbimage.flip_vertically(); // i want to have the origin at the left bottom corner of the image
-        zbimage.write_tga_file("zbuffer.tga");
-    }
 
 	/*std::cout << "yes" << std::endl;
 	system("pause");*/
