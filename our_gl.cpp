@@ -274,15 +274,6 @@ Vec3f homo2Vec3(Vec4f h)
 	return v;
 }
 
-Vec4f homo2Vec4(Vec4f h)
-{
-    h[0] = h[0] / h[3];
-    h[1] = h[1] / h[3];
-    h[2] = h[2] / h[3];
-    h[3] = 1.0;
-    return h;
-}
-
 Vec4f homoVec(Vec3f v) 
 {
 	Vec4f h;
