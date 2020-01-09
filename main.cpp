@@ -1,4 +1,4 @@
-﻿#include <vector>
+#include <vector>
 #include "tgaimage.h"
 #include "model.h"
 #include "our_gl.h"
@@ -15,11 +15,23 @@ Vec3f center = Vec3f(0, 0, 0);
 Vec3f cameraPos = Vec3f(0, -3, 15);
 Vec3f up = Vec3f(0, 1, 0);
 
+Vec3f world2screen(Vec3f v) {
+    return Vec3f(int((v.x + 1.)*width / 2.), int((v.y + 1.)*height / 2.), v.z);
+}
+Vec4f world2screen(Vec4f v) {
+    Vec4f res;
+    res[0] = (v[0] + v[3])*width / 2.;
+    res[1] = (v[1] + v[3])*height / 2.;
+    res[2] = v[2];
+    res[3] = v[3];
+
+    return res;
+}
 
 int main(int argc, char** argv) {
 	TGAImage scene(width, height, TGAImage::RGB);
 	TGAImage textureImage;
-	textureImage.read_tga_file("obj/african_head_diffuse.tga");
+	textureImage.read_tga_file("/Users/doris/Desktop/GIT/learnSoftRender/obj/african_head_diffuse.tga");
 	textureImage.flip_vertically();
 
 	zbuffer = new float[width*height];
@@ -27,7 +39,7 @@ int main(int argc, char** argv) {
 			zbuffer[i] = -std::numeric_limits<float>::max();
 	}
 
-	Model *model = new Model("obj/african_head.obj");
+	Model *model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/african_head.obj");
 
 
 	for (int i = 0; i < model->nfaces(); i++) {
@@ -48,10 +60,22 @@ int main(int argc, char** argv) {
 
 		Vec3f screen_coord[3];
 		for (int j = 0; j < 3; j++) {
-			screen_coord[j] = homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord[j]));
+//            auto a = (Projection * ModelView * homoVec(world_coord[j]));
+//            Vec4f res = homo2Vec4(a);
+//            screen_coord[j] = homo2Vec3(Viewport * res);
+            screen_coord[j] = homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord[j]));
+
+            //先转换齐次坐标，再视口转换
+//            screen_coord[j] = homo2Vec3(a);
+//            screen_coord[j] = world2screen(screen_coord[j]);
+
+//          //先视口变换，再其次坐标转化
+            //注意这里的转换坐标不一样了，而且要注意整形转换
+//            auto mid = world2screen(a);
+//            screen_coord[j] = homo2Vec3(mid);
 		}
 
-			rasterization(screen_coord[0], screen_coord[1], screen_coord[2], scene, zbuffer,norm_coord, textureImage, tex_coord);
+        rasterization(screen_coord[0], screen_coord[1], screen_coord[2], scene, zbuffer,norm_coord, textureImage, tex_coord);
 	}
 
 

@@ -21,16 +21,17 @@ void lookat(Vec3f eye, Vec3f center, Vec3f up)
 	ModelView = Minv * Tr;
 }
 
+int depth = 255;
 void viewport(int x, int y, int w, int h) 
 {
 	Viewport = Matrix::identity();
 	Viewport[0][3] = x + w / 2.f;
 	Viewport[1][3] = y + h / 2.f;
-	Viewport[2][3] = 255 / 2.0; // 1.0 //why change from depth / 2.0 ---> 1.0
+    Viewport[2][3] =  depth / 2.0;
 
 	Viewport[0][0] = w / 2.f;
 	Viewport[1][1] = h / 2.f;
-	Viewport[2][2] = 255 / 2.0; // 0.0; //
+    Viewport[2][2] =  depth / 2.0;
 }
 
 
@@ -251,7 +252,7 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float *zBuffer
 			interNorm.normalize();
 			float intensity = interNorm * light_dir;
 			if (z > zBuffer[screenPosX + image_width * screenPosY] && intensity > 0) {
-				image.set(screenPosX, screenPosY, TGAColor(intensity*color[0], intensity*color[1], intensity*color[2]));
+				image.set(screenPosX, screenPosY, TGAColor(intensity*color.r, intensity*color.g, intensity*color.b));
 
 				zBuffer[screenPosX + image_width * screenPosY] = z;
 			}
@@ -263,16 +264,23 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float *zBuffer
 
 
 
-
-
-
 Vec3f homo2Vec3(Vec4f h)
 {
+    //这里要注意整形转换，否则会有部分像素缺失
 	Vec3f v;
-	v[0] = h[0] / h[3];
-	v[1] = h[1] / h[3];
+	v[0] = int(h[0] / h[3]);
+	v[1] = int(h[1] / h[3]);
 	v[2] = h[2] / h[3];
 	return v;
+}
+
+Vec4f homo2Vec4(Vec4f h)
+{
+    h[0] = h[0] / h[3];
+    h[1] = h[1] / h[3];
+    h[2] = h[2] / h[3];
+    h[3] = 1.0;
+    return h;
 }
 
 Vec4f homoVec(Vec3f v) 
