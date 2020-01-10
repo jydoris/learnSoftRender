@@ -12,13 +12,14 @@ float *zbuffer;
 
 Vec3f light_dir = Vec3f(0, 0, 1);
 Vec3f center = Vec3f(0, 0, 0);
-Vec3f cameraPos = Vec3f(0, 0, 15);
+Vec3f cameraPos = Vec3f(0, 10, 15);
 Vec3f up = Vec3f(0, 1, 0);
+
 
 int main(int argc, char** argv) {
 	TGAImage scene(width, height, TGAImage::RGB);
 	TGAImage textureImage;
-	textureImage.read_tga_file("/Users/doris/Desktop/GIT/learnSoftRender/obj/african_head_diffuse.tga");
+	textureImage.read_tga_file("obj/african_head_diffuse.tga");
 	textureImage.flip_vertically();
 
 	zbuffer = new float[width*height];
@@ -26,7 +27,7 @@ int main(int argc, char** argv) {
 			zbuffer[i] = -std::numeric_limits<float>::max();
 	}
 
-	Model *model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/african_head.obj");
+	Model *model = new Model("obj/african_head.obj");
 
 
 	for (int i = 0; i < model->nfaces(); i++) {
@@ -50,7 +51,9 @@ int main(int argc, char** argv) {
             screen_coord[j] = homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord[j]));
 		}
 
-        rasterization(screen_coord[0], screen_coord[1], screen_coord[2], scene, zbuffer,norm_coord, textureImage, tex_coord);
+
+		rasterization(screen_coord, scene, zbuffer, norm_coord, textureImage, tex_coord);
+		
 	}
 
 

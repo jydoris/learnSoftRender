@@ -191,50 +191,56 @@ Vec3f tex2screen(int twidth, int theight, Vec3f v) {
 	return Vec3f(v.x*twidth, v.y*theight, v.z);
 }
 
-void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float *zBuffer, Vec3f norm_coord[], TGAImage &textureImage, Vec3f tex_coord[]) {
-	if (p0.y == p1.y && p1.y == p2.y) {
+void rasterization(Vec3f p[], TGAImage &image, float *zBuffer, Vec3f norm_coord[], TGAImage &textureImage, Vec3f tex_coord[]) {
+	for (int i = 0; i < 3; i++)
+	{
+		if (p[i].x < 0 || p[i].x >= image.get_width() || p[i].y < 0 || p[i].x >= image.get_height())
+			return;
+	}
+
+	if (p[0].y == p[1].y && p[1].y == p[2].y) {
 		return;
 	}
 
-	//y increase by p0, p1, p2
-	if (p0.y > p1.y) {
-		std::swap(p0, p1);
+	//y increase by p[0], p[1], p[2]
+	if (p[0].y > p[1].y) {
+		std::swap(p[0], p[1]);
 		std::swap(tex_coord[0], tex_coord[1]); //remember to do this, or the color will be not be smooth
 		std::swap(norm_coord[0], norm_coord[1]);
 	}
-	if (p0.y > p2.y) {
-		std::swap(p0, p2);
+	if (p[0].y > p[2].y) {
+		std::swap(p[0], p[2]);
 		std::swap(tex_coord[0], tex_coord[2]);
 		std::swap(norm_coord[0], norm_coord[2]);
 	}
-	if (p1.y > p2.y) {
-		std::swap(p1, p2);
+	if (p[1].y > p[2].y) {
+		std::swap(p[1], p[2]);
 		std::swap(tex_coord[1], tex_coord[2]);
 		std::swap(norm_coord[1], norm_coord[2]);
 	}
 
-	float total_height = p2.y - p0.y;
+	float total_height = p[2].y - p[0].y;
 
 	int screenPosX;
 	int screenPosY;
 	int image_width = image.get_width();
 
 	for (int y = 0; y <= total_height; y++) {
-		bool secondPart = (y + p0.y >= p1.y) ? true : false;
-		float segment_height = secondPart ? p2.y - p1.y + 0.01 : p1.y - p0.y + 0.01; //avoid zero
-		int start = secondPart ? p1.x + (y + p0.y - p1.y) / segment_height * (p2.x - p1.x) : p0.x + y / segment_height * (p1.x - p0.x);
-		int end = p0.x + y / total_height * (p2.x - p0.x);
+		bool secondPart = (y + p[0].y >= p[1].y) ? true : false;
+		float segment_height = secondPart ? p[2].y - p[1].y + 0.01 : p[1].y - p[0].y + 0.01; //avoid zero
+		int start = secondPart ? p[1].x + (y + p[0].y - p[1].y) / segment_height * (p[2].x - p[1].x) : p[0].x + y / segment_height * (p[1].x - p[0].x);
+		int end = p[0].x + y / total_height * (p[2].x - p[0].x);
 		if (start > end) {
 			std::swap(start, end);
 		}
 
 		for (int j = start; j <= end; j++) {
 			screenPosX = j;
-			screenPosY = y + p0.y;
+			screenPosY = y + p[0].y;
 
-			Vec3f factor = barycentric(p0, p1, p2, Vec3f(screenPosX, screenPosY, 0)); //value of z axis won't be used
+			Vec3f factor = barycentric(p[0], p[1], p[2], Vec3f(screenPosX, screenPosY, 0)); //value of z axis won't be used
 			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
-			float z = factor[0] * p0.z + factor[1] * p1.z + factor[2] * p2.z;
+			float z = factor[0] * p[0].z + factor[1] * p[1].z + factor[2] * p[2].z;
 			Vec3f interTex;
 			Vec3f interNorm;
 			for (int i = 0; i < 3; i++) {
@@ -248,7 +254,7 @@ void rasterization(Vec3f p0, Vec3f p1, Vec3f p2, TGAImage &image, float *zBuffer
 
 			TGAColor color = textureImage.get(texScreenCoord.x, texScreenCoord.y);
 
-			//intensit using interpolate norm
+			//intensity using interpolate norm
 			interNorm.normalize();
 			float intensity = interNorm * light_dir;
 			if (z > zBuffer[screenPosX + image_width * screenPosY] && intensity > 0) {
