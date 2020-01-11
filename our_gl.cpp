@@ -191,7 +191,11 @@ Vec3f tex2screen(int twidth, int theight, Vec3f v) {
 	return Vec3f(v.x*twidth, v.y*theight, v.z);
 }
 
-void rasterization(Vec3f p[], TGAImage &image, float *zBuffer, Vec3f norm_coord[], TGAImage &textureImage, Vec3f tex_coord[]) {
+void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
+
+	Vec3f p[3];
+	Vec3f tex_coord[3];
+	Vec3f norm_coord[3];
 	for (int i = 0; i < 3; i++)
 	{
 		if (p[i].x < 0 || p[i].x >= image.get_width() || p[i].y < 0 || p[i].x >= image.get_height())
@@ -241,24 +245,12 @@ void rasterization(Vec3f p[], TGAImage &image, float *zBuffer, Vec3f norm_coord[
 			Vec3f factor = barycentric(p[0], p[1], p[2], Vec3f(screenPosX, screenPosY, 0)); //value of z axis won't be used
 			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
 			float z = factor[0] * p[0].z + factor[1] * p[1].z + factor[2] * p[2].z;
-			Vec3f interTex;
-			Vec3f interNorm;
-			for (int i = 0; i < 3; i++) {
-				interTex[i] = factor[0] * tex_coord[0][i] + factor[1] * tex_coord[1][i] + factor[2] * tex_coord[2][i];
-				interNorm[i] = factor[0] * norm_coord[0][i] + factor[1] * norm_coord[1][i] + factor[2] * norm_coord[2][i];
-			}
-
-
-			//texture color
-			Vec3f texScreenCoord = tex2screen(textureImage.get_width(), textureImage.get_height(), interTex);
-
-			TGAColor color = textureImage.get(texScreenCoord.x, texScreenCoord.y);
-
-			//intensity using interpolate norm
-			interNorm.normalize();
-			float intensity = interNorm * light_dir;
-			if (z > zBuffer[screenPosX + image_width * screenPosY] && intensity > 0) {
-				image.set(screenPosX, screenPosY, TGAColor(intensity*color.r, intensity*color.g, intensity*color.b));
+			
+			TGAColor color;
+			shader.fragment(factor, color);
+			
+			if (z > zBuffer[screenPosX + image_width * screenPosY]) {
+				image.set(screenPosX, screenPosY, TGAColor(color.r, color.g, color.b));
 
 				zBuffer[screenPosX + image_width * screenPosY] = z;
 			}

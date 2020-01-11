@@ -62,6 +62,12 @@ std::vector<Vec3i> Model::face(int idx) {
 	return faces_[idx];
 }
 
+void Model::loadTexture(std::string filename)
+{
+	diffuseTexture_.read_tga_file(filename.c_str());
+	diffuseTexture_.flip_vertically();
+}
+
 Vec3f Model::vert(int i) {
 	return verts_[i];
 }
