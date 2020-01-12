@@ -10,54 +10,65 @@ const int width = 800;
 const int height = 800;
 float *zbuffer;
 
+Model * model;
 Vec3f light_dir = Vec3f(0, 0, 1);
 Vec3f center = Vec3f(0, 0, 0);
-Vec3f cameraPos = Vec3f(0, 0, 15);
+Vec3f cameraPos = Vec3f(4, 5, 15);
 Vec3f up = Vec3f(0, 1, 0);
 
 class GouraudShader : public Ishader {
-	//float varing_intensity;
-	
-	mat<3, 3, float> varing_pos;
 
-	mat<2, 3, float> varying_uv;  // triangle uv coordinates, written by the vertex shader, read by the fragment shader
-	mat<3, 3, float> varying_nrm; // normal per vertex to be interpolated by FS
 public:
 	GouraudShader() {};
 	void vertex(int iFace, int nthVert)
 	{
-
-		/*Vec3f world_coord[3];
-		Vec3f tex_coord[3];
-		Vec3f norm_coord[3];
-		for (int j = 0; j < 3; j++) {
-			world_coord[j] = model->vert(face[j][0]);
-			tex_coord[j] = model->text(face[j][1]);
-			norm_coord[j] = model->norm(face[j][2]);
-		}
+		std::vector<Vec3i> face = model->face(iFace);
+		
+		Vec3f world_coord = model->vert(face[nthVert][0]);
+		varying_uv.set_col(nthVert, model->text(face[nthVert][1]));
+		varying_nrm.set_col(nthVert, model->norm(face[nthVert][2]));
+		
 
 		lookat(cameraPos, center, up);
 		viewport(0, 0, width, height);
 		projection(cameraPos, center);
 
-		Vec3f screen_coord[3];
-		for (int j = 0; j < 3; j++) {
-			screen_coord[j] = homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord[j]));
-		}*/
 
+		varing_pos.set_col(nthVert, homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord)));
 	}
-	void fragment(Vec3f factor, TGAColor desColor)
+	bool fragment(Vec3f factor, TGAColor &desColor)
 	{
-		/*Vec3f interTex;
+		Vec2f interTex;
 		Vec3f interNorm;
-		for (int i = 0; i < 3; i++) {
-			interTex[i] = factor[0] * tex_coord[0][i] + factor[1] * tex_coord[1][i] + factor[2] * tex_coord[2][i];
-			interNorm[i] = factor[0] * norm_coord[0][i] + factor[1] * norm_coord[1][i] + factor[2] * norm_coord[2][i];
-		}*/
-
+		
+		interTex = varying_uv.col(0) * factor[0] + varying_uv.col(1) * factor[1] + varying_uv.col(2) * factor[2];
+		interNorm = varying_nrm.col(0) * factor[0] + varying_nrm.col(1)  * factor[1] + varying_nrm.col(2) * factor[2];
+		
 		//intensity using interpolate norm
-		/*interNorm.normalize();
-		float intensity = interNorm * light_dir;*/
+		interNorm.normalize();
+		float intensity = interNorm * light_dir;
+		if (intensity < 0) return true;
+		desColor = model->diffuse(interTex) * intensity;
+		return false;
+	}
+
+	void sort() {
+		//y increase by 0,1,2(col index)
+		if (varing_pos[1][0] > varing_pos[1][1]) {
+			varing_pos.swap_col(0, 1);
+			varying_uv.swap_col(0, 1);
+			varying_nrm.swap_col(0, 1);
+		}
+		if (varing_pos[1][0] > varing_pos[1][2]) {
+			varing_pos.swap_col(0, 2);
+			varying_uv.swap_col(0, 2);
+			varying_nrm.swap_col(0, 2);
+		}
+		if (varing_pos[1][1] > varing_pos[1][2]) {
+			varing_pos.swap_col(1, 2);
+			varying_uv.swap_col(1, 2);
+			varying_nrm.swap_col(1, 2);
+		}
 	}
 };
 
@@ -72,21 +83,21 @@ int main(int argc, char** argv) {
 			zbuffer[i] = -std::numeric_limits<float>::max();
 	}
 
-	Model *model = new Model("obj/african_head.obj");
+	model = new Model("obj/african_head.obj");
 
 	model->loadTexture("obj/african_head_diffuse.tga");
 
 	GouraudShader shader;
 	for (int i = 0; i < model->nfaces(); i++) {
 		for (int j = 0; j < 3; j++) {
-			/*std::vector<Vec3i> face = model->face(i);*/
+			/**/
 			shader.vertex(i, j);
 		}
-		
+		shader.sort();
 		rasterization(scene, zbuffer, shader);
 		
 	}
-
+	delete model;
 
 	scene.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	scene.write_tga_file("output.tga");

@@ -194,33 +194,13 @@ Vec3f tex2screen(int twidth, int theight, Vec3f v) {
 void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 
 	Vec3f p[3];
-	Vec3f tex_coord[3];
-	Vec3f norm_coord[3];
-	for (int i = 0; i < 3; i++)
-	{
+	for (int i = 0; i < 3; i++) {
+		p[i] = shader.varing_pos.col(i);
 		if (p[i].x < 0 || p[i].x >= image.get_width() || p[i].y < 0 || p[i].x >= image.get_height())
 			return;
 	}
-
 	if (p[0].y == p[1].y && p[1].y == p[2].y) {
 		return;
-	}
-
-	//y increase by p[0], p[1], p[2]
-	if (p[0].y > p[1].y) {
-		std::swap(p[0], p[1]);
-		std::swap(tex_coord[0], tex_coord[1]); //remember to do this, or the color will be not be smooth
-		std::swap(norm_coord[0], norm_coord[1]);
-	}
-	if (p[0].y > p[2].y) {
-		std::swap(p[0], p[2]);
-		std::swap(tex_coord[0], tex_coord[2]);
-		std::swap(norm_coord[0], norm_coord[2]);
-	}
-	if (p[1].y > p[2].y) {
-		std::swap(p[1], p[2]);
-		std::swap(tex_coord[1], tex_coord[2]);
-		std::swap(norm_coord[1], norm_coord[2]);
 	}
 
 	float total_height = p[2].y - p[0].y;
@@ -247,9 +227,10 @@ void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 			float z = factor[0] * p[0].z + factor[1] * p[1].z + factor[2] * p[2].z;
 			
 			TGAColor color;
-			shader.fragment(factor, color);
+	
+			bool discard = shader.fragment(factor, color);
 			
-			if (z > zBuffer[screenPosX + image_width * screenPosY]) {
+			if (!discard && z > zBuffer[screenPosX + image_width * screenPosY]) {
 				image.set(screenPosX, screenPosY, TGAColor(color.r, color.g, color.b));
 
 				zBuffer[screenPosX + image_width * screenPosY] = z;

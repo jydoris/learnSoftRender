@@ -22,9 +22,10 @@ Model::Model(const char *filename) : verts_(), faces_() {
 		}
 		else if (!line.compare(0, 3, "vt ")) {
 			iss >> trash >> trash;
-			Vec3f v;
-			for (int i = 0; i<3; i++) iss >> v[i];
+			Vec2f v;
+			for (int i = 0; i<2; i++) iss >> v[i];
 			texts_.push_back(v);
+			iss >> trash;
 		}
 		else if (!line.compare(0, 3, "vn ")) {
 			iss >> trash >> trash;
@@ -72,10 +73,15 @@ Vec3f Model::vert(int i) {
 	return verts_[i];
 }
 
-Vec3f Model::text(int i) {
+Vec2f Model::text(int i) {
 	return texts_[i];
 }
 
 Vec3f Model::norm(int i) {
 	return norms_[i];
+}
+
+TGAColor Model::diffuse(Vec2f uvf) {
+	Vec2i uv(uvf[0] * diffuseTexture_.get_width(), uvf[1] * diffuseTexture_.get_height());
+	return diffuseTexture_.get(uv[0], uv[1]);
 }

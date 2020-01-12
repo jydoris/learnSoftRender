@@ -138,6 +138,15 @@ public:
 		for (size_t i = DimRows; i--; rows[i][idx] = v[i]);
 	}
 
+	void swap_col(size_t idx, size_t idu) {
+		assert(idx<DimCols);
+		assert(idu < DimCols);
+		vec<DimRows, T> tmp;
+		tmp = this->col(idx);
+		this->set_col(idx, this->col(idu));
+		this->set_col(idu, tmp);
+	}
+
 	static mat<DimRows, DimCols, T> identity() {
 		mat<DimRows, DimCols, T> ret;
 		for (size_t i = DimRows; i--; )
