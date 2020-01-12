@@ -1,4 +1,5 @@
 #include <vector>
+#include <algorithm>
 #include "tgaimage.h"
 #include "model.h"
 #include "our_gl.h"
@@ -49,10 +50,15 @@ public:
 		
 		//intensity using interpolate norm
 		interNorm.normalize();
-		//float intensity = interNorm * light_dir;
-		float intensity = n * l;
+		Vec3f r = (n*(n*l*2.f) - l).normalize();   // reflected light
+		float spec = pow(std::max(r.z, 0.0f), model->specular(interTex));
+		float diff = std::max(0.f, n*l);
+		TGAColor c = model->diffuse(interTex);
+		/*float intensity = n * l;
 		if (intensity < 0) return true;
-		desColor = model->diffuse(interTex) * intensity;
+		desColor = model->diffuse(interTex) * intensity;*/
+		for (int i = 0; i<3; i++) 
+			desColor.raw[i] = std::min<float>(5 + c.raw[i] * (diff + 0.6*spec), 255);
 		
 		return false;
 	}
@@ -96,6 +102,7 @@ int main(int argc, char** argv) {
 
 	model->loadTexture("obj/african_head_diffuse.tga");
 	model->loadNoraml("obj/african_head_nm.tga");
+	model->loadSpecular("obj/african_head_spec.tga");
 
 	GouraudShader shader;
 	shader.uniform_M = Projection * ModelView;

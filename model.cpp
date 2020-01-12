@@ -75,6 +75,12 @@ void Model::loadNoraml(std::string filename)
 	normalmap_.flip_vertically();
 }
 
+void Model::loadSpecular(std::string filename)
+{
+	specularmap_.read_tga_file(filename.c_str());
+	specularmap_.flip_vertically();
+}
+
 Vec3f Model::vert(int i) {
 	return verts_[i];
 }
@@ -99,4 +105,11 @@ Vec3f Model::normal(Vec2f uvf) {
 TGAColor Model::diffuse(Vec2f uvf) {
 	Vec2i uv(uvf[0] * diffuseTexture_.get_width(), uvf[1] * diffuseTexture_.get_height());
 	return diffuseTexture_.get(uv[0], uv[1]);
+}
+
+float Model::specular(Vec2f uvf)
+{
+	Vec2i uv(uvf[0] * specularmap_.get_width(), uvf[1] * specularmap_.get_height());
+	return specularmap_.get(uv[0], uv[1]).raw[0] / 1.f;
+
 }
