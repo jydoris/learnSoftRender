@@ -17,8 +17,6 @@ public:
 
 	mat<3, 3, float> varing_pos;
 
-	mat<2, 3, float> varying_uv;  // triangle uv coordinates, written by the vertex shader, read by the fragment shader
-	mat<3, 3, float> varying_nrm; // normal per vertex to be interpolated by FS
 public:
 	//Ishader() {};
 	virtual ~Ishader() {};

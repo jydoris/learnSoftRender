@@ -1,6 +1,8 @@
 /Debug
 /release
+/x64
 *.vcxproj
 *.filters
 *.user
 output.tga
+

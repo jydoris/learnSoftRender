@@ -69,6 +69,12 @@ void Model::loadTexture(std::string filename)
 	diffuseTexture_.flip_vertically();
 }
 
+void Model::loadNoraml(std::string filename)
+{
+	normalmap_.read_tga_file(filename.c_str());
+	normalmap_.flip_vertically();
+}
+
 Vec3f Model::vert(int i) {
 	return verts_[i];
 }
@@ -79,6 +85,15 @@ Vec2f Model::text(int i) {
 
 Vec3f Model::norm(int i) {
 	return norms_[i];
+}
+
+Vec3f Model::normal(Vec2f uvf) {
+	Vec2i uv(uvf[0] * normalmap_.get_width(), uvf[1] * normalmap_.get_height());
+	TGAColor c = normalmap_.get(uv[0], uv[1]);
+	Vec3f res;
+	for (int i = 0; i<3; i++)
+		res[2 - i] = (float)c.raw[i] / 255.f*2.f - 1.f;
+	return res;
 }
 
 TGAColor Model::diffuse(Vec2f uvf) {
