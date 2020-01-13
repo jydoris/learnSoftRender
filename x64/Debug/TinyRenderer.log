@@ -1,3 +1,0 @@
-﻿  main.cpp
-d:\tinyrenderer\tinyrenderer\tgaimage.h(64): warning C4244: “=”: 从“float”转换到“unsigned char”，可能丢失数据
-  TinyRenderer.vcxproj -> D:\TinyRenderer\x64\Debug\learnTinyRenderer.exe
