@@ -41,15 +41,15 @@ public:
 	bool fragment(Vec3f factor, TGAColor &desColor)
 	{
 		Vec2f interTex;
-		Vec3f interNorm;
+		//Vec3f interNorm;
 		
 		interTex = varying_uv * factor;
-		interNorm = varying_nrm * factor;
+		//interNorm = varying_nrm * factor;
 		Vec3f n = homo2Vec3(uniform_MIT*homoVec(model->normal(interTex))).normalize();
 		Vec3f l = homo2Vec3(uniform_M  * homoVec(light_dir)).normalize();
 		
 		//intensity using interpolate norm
-		interNorm.normalize();
+		//interNorm.normalize();
 		Vec3f r = (n*(n*l*2.f) - l).normalize();   // reflected light
 		float spec = pow(std::max(r.z, 0.0f), model->specular(interTex));
 		float diff = std::max(0.f, n*l);
