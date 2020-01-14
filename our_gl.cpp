@@ -229,7 +229,8 @@ void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 			TGAColor color;
 	
 			bool discard = shader.fragment(factor, color);
-			
+			if(screenPosX < 0 || screenPosX >= image_width || screenPosY <0 || screenPosY >= image.get_height())
+                discard = true;
 			if (!discard && z > zBuffer[screenPosX + image_width * screenPosY]) {
 				image.set(screenPosX, screenPosY, TGAColor(color.r, color.g, color.b));
 
