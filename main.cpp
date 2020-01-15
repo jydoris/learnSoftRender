@@ -14,7 +14,7 @@ float *zbuffer;
 Model * model;
 Vec3f light_dir = Vec3f(0, 0, 1);
 Vec3f center = Vec3f(0, 0, 0);
-Vec3f cameraPos = Vec3f(4, 0, 5);
+Vec3f cameraPos = Vec3f(1, -1, 5);
 Vec3f up = Vec3f(0, 1, 0);
 
 class GouraudShader : public Ishader {
@@ -34,7 +34,7 @@ public:
 		
 		Vec3f world_coord = model->vert(face[nthVert][0]);
 		varying_uv.set_col(nthVert, model->text(face[nthVert][1]));
-		varying_nrm.set_col(nthVert, model->norm(face[nthVert][2]));
+		varying_nrm.set_col(nthVert, homo2Vec3(uniform_MIT * homoVec(model->norm(face[nthVert][2]))));
 		
 		varing_pos.set_col(nthVert, homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord)));
 	}
