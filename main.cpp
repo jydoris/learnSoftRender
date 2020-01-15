@@ -14,7 +14,7 @@ float *zbuffer;
 Model * model;
 Vec3f light_dir = Vec3f(0, 0, 1);
 Vec3f center = Vec3f(0, 0, 0);
-Vec3f cameraPos = Vec3f(4, 0, 5);
+Vec3f cameraPos = Vec3f(1, -1, 5);
 Vec3f up = Vec3f(0, 1, 0);
 
 class GouraudShader : public Ishader {
@@ -34,31 +34,36 @@ public:
 		
 		Vec3f world_coord = model->vert(face[nthVert][0]);
 		varying_uv.set_col(nthVert, model->text(face[nthVert][1]));
-		varying_nrm.set_col(nthVert, model->norm(face[nthVert][2]));
+		varying_nrm.set_col(nthVert, homo2Vec3(uniform_MIT * homoVec(model->norm(face[nthVert][2]))));
 		
 		varing_pos.set_col(nthVert, homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord)));
 	}
 	bool fragment(Vec3f factor, TGAColor &desColor)
 	{
 		Vec2f interTex;
-		Vec3f interNorm;
-		
 		interTex = varying_uv * factor;
-		interNorm = varying_nrm * factor;
-		Vec3f n = homo2Vec3(uniform_MIT*homoVec(model->normal(interTex))).normalize();
-		Vec3f l = homo2Vec3(uniform_M  * homoVec(light_dir)).normalize();
+
+		Vec3f bn = (varying_nrm*factor).normalize();
 		
-		//intensity using interpolate norm
-		interNorm.normalize();
-		Vec3f r = (n*(n*l*2.f) - l).normalize();   // reflected light
-		float spec = pow(std::max(r.z, 0.0f), model->specular(interTex));
-		float diff = std::max(0.f, n*l);
-		TGAColor c = model->diffuse(interTex);
-		/*float intensity = n * l;
-		if (intensity < 0) return true;
-		desColor = model->diffuse(interTex) * intensity;*/
-		for (int i = 0; i<3; i++) 
-			desColor.raw[i] = std::min<float>(5 + c.raw[i] * (diff + 0.6*spec), 255);
+		mat<3, 3, float> A;
+		A[0] = varing_pos.col(1) - varing_pos.col(0);
+		A[1] = varing_pos.col(2) - varing_pos.col(0);
+		A[2] = bn;
+
+		mat<3, 3, float> AI = A.invert();
+
+		Vec3f i = AI * Vec3f(varying_uv[0][1] - varying_uv[0][0], varying_uv[0][2] - varying_uv[0][0], 0);
+		Vec3f j = AI * Vec3f(varying_uv[1][1] - varying_uv[1][0], varying_uv[1][2] - varying_uv[1][0], 0);
+
+		mat<3, 3, float> B;
+		B.set_col(0, i.normalize());
+		B.set_col(1, j.normalize());
+		B.set_col(2, bn);
+
+		Vec3f n = (B*model->normal(interTex)).normalize();
+
+		float diff = std::max(0.f, n*light_dir);
+		desColor = model->diffuse(interTex)*diff;
 		
 		return false;
 	}
@@ -101,8 +106,9 @@ int main(int argc, char** argv) {
 	model = new Model("obj/african_head.obj");
 
 	model->loadTexture("obj/african_head_diffuse.tga");
-	model->loadNoraml("obj/african_head_nm.tga");
-	model->loadSpecular("obj/african_head_spec.tga");
+	//model->loadNoraml("obj/african_head_nm.tga");
+	model->loadNoraml("obj/african_head_nm_tangent.tga");
+	//model->loadSpecular("obj/african_head_spec.tga");
 
 	GouraudShader shader;
 	shader.uniform_M = Projection * ModelView;
