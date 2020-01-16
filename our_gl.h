@@ -10,6 +10,8 @@ void lookat(Vec3f eye, Vec3f center, Vec3f up);
 void viewport(int x, int y, int w, int h);
 void projection(Vec3f cameraPos, Vec3f center);
 
+const int depth = 255;
+
 class Ishader{
 
 public:

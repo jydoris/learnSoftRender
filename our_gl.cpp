@@ -21,7 +21,6 @@ void lookat(Vec3f eye, Vec3f center, Vec3f up)
 	ModelView = Minv * Tr;
 }
 
-int depth = 255;
 void viewport(int x, int y, int w, int h) 
 {
 	Viewport = Matrix::identity();
@@ -225,9 +224,8 @@ void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 			Vec3f factor = barycentric(p[0], p[1], p[2], Vec3f(screenPosX, screenPosY, 0)); //value of z axis won't be used
 			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
 			float z = factor[0] * p[0].z + factor[1] * p[1].z + factor[2] * p[2].z;
-			
+
 			TGAColor color;
-	
 			bool discard = shader.fragment(factor, color);
 			if(screenPosX < 0 || screenPosX >= image_width || screenPosY <0 || screenPosY >= image.get_height())
                 discard = true;
@@ -240,8 +238,6 @@ void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 
 	}
 }
-
-
 
 
 Vec3f homo2Vec3(Vec4f h)
