@@ -239,6 +239,23 @@ void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 		}
 
 	}
+
+	//draw the TBN normals
+	Vec2f lineStart = Vec2f(p[0].x, p[0].y);
+	Vec3f tmp = p[0] + shader.tangent_norm.col(0) * 12;
+	Vec2f lineEnd1 = Vec2f(tmp.x, tmp.y);
+	tmp = p[0] + shader.tangent_norm.col(1) * 12;
+	Vec2f lineEnd2 = Vec2f(tmp.x, tmp.y);
+	tmp = p[0] + shader.tangent_norm.col(2) * 12;
+	Vec2f lineEnd3 = Vec2f(tmp.x, tmp.y);
+	
+	line(lineStart, lineEnd1, image, TGAColor(255, 255, 0, 255));
+	line(lineStart, lineEnd2, image, TGAColor(125, 125, 0, 255));
+	line(lineStart, lineEnd3, image, TGAColor(0, 125, 125, 255));
+	image.set(p[0].x, p[0].y, TGAColor(0, 0, 0, 255));
+	image.set(p[1].x, p[1].y, TGAColor(0, 0, 0, 255));
+	image.set(p[2].x, p[2].y, TGAColor(0, 0, 0, 255));
+
 }
 
 

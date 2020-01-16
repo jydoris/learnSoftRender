@@ -7,6 +7,7 @@ const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 255);
 const TGAColor green = TGAColor(0, 255, 0, 255);
 const TGAColor blue = TGAColor(0, 0, 255, 255);
+const TGAColor yellow = TGAColor(255, 255, 0, 255);
 const int width = 800;
 const int height = 800;
 float *zbuffer;
@@ -55,10 +56,16 @@ public:
 		Vec3f i = AI * Vec3f(varying_uv[0][1] - varying_uv[0][0], varying_uv[0][2] - varying_uv[0][0], 0);
 		Vec3f j = AI * Vec3f(varying_uv[1][1] - varying_uv[1][0], varying_uv[1][2] - varying_uv[1][0], 0);
 
+
 		mat<3, 3, float> B;
 		B.set_col(0, i.normalize());
 		B.set_col(1, j.normalize());
 		B.set_col(2, bn);
+
+		tangent_norm = B;
+		/*tangent_norm.set_col(0, homo2Vec3(uniform_MIT * homoVec(i.normalize())));
+		tangent_norm.set_col(1, homo2Vec3(uniform_MIT * homoVec(j.normalize())));
+		tangent_norm.set_col(2, homo2Vec3(uniform_MIT * homoVec(bn)));*/
 
 		Vec3f n = (B*model->normal(interTex)).normalize();
 
@@ -105,7 +112,7 @@ int main(int argc, char** argv) {
 
 	model = new Model("obj/african_head.obj");
 
-	model->loadTexture("obj/african_head_diffuse.tga");
+	model->loadTexture("obj/grid.tga");
 	//model->loadNoraml("obj/african_head_nm.tga");
 	model->loadNoraml("obj/african_head_nm_tangent.tga");
 	//model->loadSpecular("obj/african_head_spec.tga");
@@ -120,6 +127,10 @@ int main(int argc, char** argv) {
 		}
 		shader.sort();
 		rasterization(scene, zbuffer, shader);
+		/*line(Vec2f(shader.varing_pos.col(0).x, shader.varing_pos.col(0).y), Vec2f(shader.varing_pos.col(1).x, shader.varing_pos.col(1).y), scene, TGAColor(0, 0, 0, 255));
+		line(Vec2f(shader.varing_pos.col(1).x, shader.varing_pos.col(1).y), Vec2f(shader.varing_pos.col(2).x, shader.varing_pos.col(2).y), scene, TGAColor(0, 0, 0, 255));
+		line(Vec2f(shader.varing_pos.col(2).x, shader.varing_pos.col(2).y), Vec2f(shader.varing_pos.col(0).x, shader.varing_pos.col(0).y), scene, TGAColor(0, 0, 0, 255));*/
+
 		
 	}
 	delete model;
