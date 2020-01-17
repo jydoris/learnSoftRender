@@ -37,3 +37,4 @@ void rasterization(Vec3f p[], TGAImage &image, float *zBuffer, Vec3f norm_coord[
 void rasterization(TGAImage &image, float *zBuffer, Ishader &shader);
 Vec3f homo2Vec3(Vec4f h);
 Vec4f homoVec(Vec3f v);
+bool isValidScreenCoord(Vec3f pos, int image_width, int image_height);

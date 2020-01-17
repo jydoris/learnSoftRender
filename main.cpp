@@ -13,9 +13,9 @@ float *zbuffer;
 float *shadowBuffer;
 
 Model * model;
-Vec3f light_dir = Vec3f(0, 0, 1);
+Vec3f light_dir = Vec3f(0, 5, 5);
 Vec3f center = Vec3f(0, 0, 0);
-Vec3f cameraPos = Vec3f(1, -1, 5);
+Vec3f cameraPos = Vec3f(1, 1, 5);
 Vec3f up = Vec3f(0, 1, 0);
 
 class Shader : public Ishader {
@@ -25,10 +25,16 @@ public:
 
     mat<4, 4, float> uniform_M;   //  Projection*ModelView
     mat<4, 4, float> uniform_MIT; // (Projection*ModelView).invert_transpose()
+	mat<4, 4, float> uniform_ShadowTran;
 
 
 public:
     Shader() {};
+	Shader(Matrix M, Matrix MIT, Matrix shadowTrans) {
+		uniform_M = M;
+		uniform_MIT = MIT;
+		uniform_ShadowTran = shadowTrans;
+	}
     void vertex(int iFace, int nthVert)
     {
         std::vector<Vec3i> face = model->face(iFace);
@@ -41,11 +47,12 @@ public:
     }
     bool fragment(Vec3f factor, TGAColor &desColor)
     {
+		//texture coord interpolate
         Vec2f interTex;
         interTex = varying_uv * factor;
-
         Vec3f bn = (varying_nrm*factor).normalize();
 
+		//tangent normal mapping
         mat<3, 3, float> A;
         A[0] = varing_pos.col(1) - varing_pos.col(0);
         A[1] = varing_pos.col(2) - varing_pos.col(0);
@@ -64,7 +71,20 @@ public:
         Vec3f n = (B*model->normal(interTex)).normalize();
 
         float diff = std::max(0.f, n*light_dir);
-        desColor = model->diffuse(interTex)*diff;
+
+		//shadow compute
+
+		float shadow;
+		Vec3f backShaowCoord = homo2Vec3(uniform_ShadowTran * homoVec(varing_pos*factor));
+		if (!isValidScreenCoord(backShaowCoord, width, height))
+			shadow = 1.0;
+		else {
+			int index = backShaowCoord.x + backShaowCoord.y * width;
+			shadow = 0.3 + 0.7 *(backShaowCoord.z > shadowBuffer[index]);
+		}
+	
+		//descolor compute
+        desColor = model->diffuse(interTex)*diff * shadow;
         return false;
     }
 
@@ -134,13 +154,16 @@ int main(int argc, char** argv) {
     }
 
 
-    model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose.obj");
-    model->loadTexture("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_diffuse.tga");
-    model->loadNoraml("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
+    model = new Model("obj/diablo3_pose/diablo3_pose.obj");
+    model->loadTexture("obj/diablo3_pose/diablo3_pose_diffuse.tga");
+    model->loadNoraml("obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
 
     lookat(light_dir, center, up);
     viewport(0, 0, width, height);
     Projection = Matrix::identity();
+
+	Matrix M = Viewport * Projection * ModelView;
+
 
     depthShader dShader;
     for (int i = 0; i < model->nfaces(); i++) {
@@ -159,9 +182,7 @@ int main(int argc, char** argv) {
     lookat(cameraPos, center, up);
     viewport(0, 0, width, height);
     projection(cameraPos, center);
-    Shader shader;
-    shader.uniform_M = Projection * ModelView;
-    shader.uniform_MIT = (Projection*ModelView).invert_transpose();
+    Shader shader(Projection * ModelView, (Projection*ModelView).invert_transpose(),M * (Viewport * Projection * ModelView).invert());
     for (int i = 0; i < model->nfaces(); i++) {
         for (int j = 0; j < 3; j++) {
             shader.vertex(i, j);

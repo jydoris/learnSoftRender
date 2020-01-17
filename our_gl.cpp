@@ -227,7 +227,7 @@ void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 
 			TGAColor color;
 			bool discard = shader.fragment(factor, color);
-			if(screenPosX < 0 || screenPosX >= image_width || screenPosY <0 || screenPosY >= image.get_height())
+			if(!isValidScreenCoord(Vec3f(screenPosX, screenPosY, 0), image.get_width(), image.get_height()))
                 discard = true;
 			if (!discard && z > zBuffer[screenPosX + image_width * screenPosY]) {
 				image.set(screenPosX, screenPosY, TGAColor(color.r, color.g, color.b));
@@ -258,4 +258,11 @@ Vec4f homoVec(Vec3f v)
 	h[2] = v[2];
 	h[3] = 1;
 	return h;
+}
+
+bool isValidScreenCoord(Vec3f pos, int image_width, int image_height)
+{
+	if (pos.x < 0 || pos.x >= image_width || pos.y < 0 || pos.y >= image_height)
+		return false;
+	return true;
 }
