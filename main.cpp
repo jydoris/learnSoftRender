@@ -153,10 +153,15 @@ int main(int argc, char** argv) {
         shadowBuffer[i] = -std::numeric_limits<float>::max();
     }
 
-
+#ifdef __APPLE__
+    model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose.obj");
+    model->loadTexture("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_diffuse.tga");
+    model->loadNoraml("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
+#elif _WIN32
     model = new Model("obj/diablo3_pose/diablo3_pose.obj");
     model->loadTexture("obj/diablo3_pose/diablo3_pose_diffuse.tga");
     model->loadNoraml("obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
+#endif
 
     lookat(light_dir, center, up);
     viewport(0, 0, width, height);
