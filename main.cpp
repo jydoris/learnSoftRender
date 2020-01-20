@@ -249,7 +249,6 @@ public:
         float diff = std::max(0.f, n*light_dir);
 
         //shadow compute
-
         float shadow;
         Vec3f backShaowCoord = homo2Vec3(uniform_ShadowTran * homoVec(varing_pos*factor));
         if (!isValidScreenCoord(backShaowCoord, width, height))
@@ -266,10 +265,10 @@ public:
         //descolor compute
         TGAColor co = model->ambient(interTex);
         TGAColor difCo = model->diffuse(interTex);
-        //        for(int j = 0; j < 3; j++)
-        //            desColor.raw[j] =  std::min<float>(co.b * 0.05 + (difCo.raw[j]*(diff + 0.2 * spec ) * shadow), 255);
+        for(int j = 0; j < 3; j++)
+            desColor.raw[j] =  std::min<float>(co.b * 0.01 + (difCo.raw[j]*(0.8 * diff + 0.2 * spec ) * shadow), 255);
         //单纯环境光贴图
-        desColor = TGAColor(co.b, co.b, co.b, 255);
+//      desColor = TGAColor(co.b, co.b, co.b, 255);
 
         return false;
     }
@@ -371,7 +370,6 @@ void computeAmbientMap()
     total.write_tga_file("occlusion.tga");
     occl.flip_vertically();
     occl.write_tga_file("occl.tga");
-
 }
 
 
