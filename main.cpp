@@ -303,30 +303,19 @@ Vec3f rand_point_on_unit_sphere() {
     return Vec3f(sin(phi)*cos(theta), sin(phi)*sin(theta), cos(phi));
 }
 
-int main(int argc, char** argv) {
-    TGAImage scene(width, height, TGAImage::RGB);
-    TGAImage depthImage(width, height, TGAImage::RGB);
 
-    zbuffer = new float[width * height];
-    shadowBuffer = new float[width * height];
+void resetZbfShadowBf()
+{
     for (int i = 0; i < width*height; i++) {
-        zbuffer[i] = -std::numeric_limits<float>::max();
-        shadowBuffer[i] = -std::numeric_limits<float>::max();
-    }
+           zbuffer[i] = -std::numeric_limits<float>::max();
+           shadowBuffer[i] = -std::numeric_limits<float>::max();
+       }
+}
 
-#ifdef __APPLE__
-    model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose.obj");
-    model->loadTexture("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_diffuse.tga");
-    model->loadAmbient("occlusion.tga");
-
-    model->loadNoraml("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
-    model->loadSpecular("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_spec.tga");
-#elif _WIN32
-    model = new Model("obj/diablo3_pose/diablo3_pose.obj");
-    model->loadTexture("obj/diablo3_pose/diablo3_pose_diffuse.tga");
-    model->loadNoraml("obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
-#endif
-    const int nrenders = 100;
+void computeAmbientMap()
+{
+    TGAImage depthImage(width, height, TGAImage::RGB);
+    const int nrenders = 10;
     for (int iter=1; iter<=nrenders; iter++) {
         std::cout << iter <<"/" << nrenders << std::endl;
         //随机出一个光源位置
@@ -338,10 +327,7 @@ int main(int argc, char** argv) {
         viewport(width/8, height/8, width*3/4, height*3/4);
         Projection = Matrix::identity();
 
-        for (int i = 0; i < width*height; i++) {
-            zbuffer[i] = -std::numeric_limits<float>::max();
-            shadowBuffer[i] = -std::numeric_limits<float>::max();
-        }
+        resetZbfShadowBf();
 
         //进行光照，计算各个区域深度，主要为了计算shadowBuffer
         depthShader dShader;
@@ -386,14 +372,38 @@ int main(int argc, char** argv) {
     occl.flip_vertically();
     occl.write_tga_file("occl.tga");
 
+}
+
+
+int main(int argc, char** argv)
+{
+    TGAImage scene(width, height, TGAImage::RGB);
+    TGAImage depthImage(width, height, TGAImage::RGB);
+
+    zbuffer = new float[width * height];
+    shadowBuffer = new float[width * height];
+    resetZbfShadowBf();
+
+#ifdef __APPLE__
+    model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose.obj");
+    model->loadTexture("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_diffuse.tga");
+    model->loadAmbient("occlusion.tga");
+
+    model->loadNoraml("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
+    model->loadSpecular("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_spec.tga");
+#elif _WIN32
+    model = new Model("obj/diablo3_pose/diablo3_pose.obj");
+    model->loadTexture("obj/diablo3_pose/diablo3_pose_diffuse.tga");
+    model->loadNoraml("obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
+#endif
+
+    computeAmbientMap();
     eye = Vec3f(1, 1, 5);
     up = Vec3f(0, 1, 0);
-    for (int i = 0; i < width*height; i++) {
-        zbuffer[i] = -std::numeric_limits<float>::max();
-        shadowBuffer[i] = -std::numeric_limits<float>::max();
-    }
+    resetZbfShadowBf();
     depthImage.clear();
 
+    //计算阴影
     lookat(light_dir, center, up);
     viewport(0, 0, width, height);
     Projection = Matrix::identity();
@@ -411,9 +421,9 @@ int main(int argc, char** argv) {
 
     depthImage.flip_vertically();
     depthImage.write_tga_file("depthImage.tga");
-
     std::cout << "Finish writing depth image.\n";
 
+    //常规渲图
     lookat(eye, center, up);
     viewport(0, 0, width, height);
     projection(eye, center);
@@ -425,15 +435,13 @@ int main(int argc, char** argv) {
         shader.sort();
         rasterization(scene, zbuffer, shader);
     }
-    //
-    scene.flip_vertically(); // i want to have the origin at the left bottom corner of the image
+
+    scene.flip_vertically();
     scene.write_tga_file("output.tga");
 
 
     delete[] zbuffer;
     delete[] shadowBuffer;
     delete model;
-    /*std::cout << "yes" << std::endl;
-     system("pause");*/
     return 0;
 }
