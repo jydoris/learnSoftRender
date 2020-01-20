@@ -68,6 +68,12 @@ void Model::loadTexture(std::string filename)
 	diffuseTexture_.flip_vertically();
 }
 
+void Model::loadAmbient(std::string filename)
+{
+    ambientmap_.read_tga_file(filename.c_str());
+    ambientmap_.flip_vertically();
+}
+
 void Model::loadNoraml(std::string filename)
 {
 	normalmap_.read_tga_file(filename.c_str());
@@ -111,4 +117,10 @@ float Model::specular(Vec2f uvf)
 	Vec2i uv(uvf[0] * specularmap_.get_width(), uvf[1] * specularmap_.get_height());
 	return specularmap_.get(uv[0], uv[1]).raw[0] / 1.f;
 
+}
+
+TGAColor Model::ambient(Vec2f uvf)
+{
+    Vec2i uv(uvf[0] * ambientmap_.get_width(), uvf[1] * ambientmap_.get_height());
+    return ambientmap_.get(uv[0], uv[1]);
 }
