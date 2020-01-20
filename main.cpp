@@ -167,7 +167,7 @@ public:
         Vec2f interTex;
         interTex = varying_uv * factor;
         Vec3f p = varing_pos * factor;
-        if(std::abs(shadowBuffer[int(p.x+p.y*width)]-p.z)<1e-2)
+        if(std::abs(shadowBuffer[int(p.x+p.y*width)]-p.z)<1e-5)
         {
             occl.set(interTex.x * 1024, interTex.y * 1024, TGAColor(255, 255, 255));
         }
@@ -265,10 +265,10 @@ public:
         //descolor compute
         TGAColor co = model->ambient(interTex);
         TGAColor difCo = model->diffuse(interTex);
-        for(int j = 0; j < 3; j++)
-            desColor.raw[j] =  std::min<float>(co.b * 0.01 + (difCo.raw[j]*(0.8 * diff + 0.2 * spec ) * shadow), 255);
+//        for(int j = 0; j < 3; j++)
+//            desColor.raw[j] =  std::min<float>(co.b * 0.01 + (difCo.raw[j]*(0.8 * diff + 0.2 * spec ) * shadow), 255);
         //单纯环境光贴图
-//      desColor = TGAColor(co.b, co.b, co.b, 255);
+      desColor = TGAColor(co.b, co.b, co.b, 255);
 
         return false;
     }
@@ -314,7 +314,7 @@ void resetZbfShadowBf()
 void computeAmbientMap()
 {
     TGAImage depthImage(width, height, TGAImage::RGB);
-    const int nrenders = 10;
+    const int nrenders = 1000;
     for (int iter=1; iter<=nrenders; iter++) {
         std::cout << iter <<"/" << nrenders << std::endl;
         //随机出一个光源位置
@@ -370,6 +370,8 @@ void computeAmbientMap()
     total.write_tga_file("occlusion.tga");
     occl.flip_vertically();
     occl.write_tga_file("occl.tga");
+
+    model->loadAmbient("occlusion.tga");
 }
 
 
@@ -385,7 +387,7 @@ int main(int argc, char** argv)
 #ifdef __APPLE__
     model = new Model("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose.obj");
     model->loadTexture("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_diffuse.tga");
-    model->loadAmbient("occlusion.tga");
+    //model->loadAmbient("occlusion.tga");
 
     model->loadNoraml("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
     model->loadSpecular("/Users/doris/Desktop/GIT/learnSoftRender/obj/diablo3_pose/diablo3_pose_spec.tga");
@@ -418,7 +420,7 @@ int main(int argc, char** argv)
     }
 
     depthImage.flip_vertically();
-    depthImage.write_tga_file("depthImage.tga");
+    depthImage.write_tga_file("renDepthImage.tga");
     std::cout << "Finish writing depth image.\n";
 
     //常规渲图

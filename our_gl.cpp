@@ -190,6 +190,8 @@ Vec3f tex2screen(int twidth, int theight, Vec3f v) {
 	return Vec3f(v.x*twidth, v.y*theight, v.z);
 }
 
+
+//MARK: always new rasterization
 void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 
 	Vec3f p[3];
@@ -221,14 +223,17 @@ void rasterization(TGAImage &image, float *zBuffer, Ishader &shader) {
 			screenPosX = j;
 			screenPosY = y + p[0].y;
 
+            if(!isValidScreenCoord(Vec3f(screenPosX, screenPosY, 0), image.get_width(), image.get_height()))
+                continue;
+            
 			Vec3f factor = barycentric(p[0], p[1], p[2], Vec3f(screenPosX, screenPosY, 0)); //value of z axis won't be used
 			if (factor.x < 0 || factor.y < 0 || factor.z < 0) continue;
+
 			float z = factor[0] * p[0].z + factor[1] * p[1].z + factor[2] * p[2].z;
 
 			TGAColor color;
 			bool discard = shader.fragment(factor, color);
-			if(!isValidScreenCoord(Vec3f(screenPosX, screenPosY, 0), image.get_width(), image.get_height()))
-                discard = true;
+
 			if (!discard && z > zBuffer[screenPosX + image_width * screenPosY]) {
 				image.set(screenPosX, screenPosY, TGAColor(color.r, color.g, color.b));
 
