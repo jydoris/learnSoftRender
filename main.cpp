@@ -146,6 +146,36 @@ public:
     }
 };
 
+class ZShader : public Ishader {
+public:
+    void vertex(int iFace, int nthVert) {
+        std::vector<Vec3i> face = model->face(iFace);
+
+        Vec3f world_coord = model->vert(face[nthVert][0]);
+
+        varing_pos.set_col(nthVert, homo2Vec3(Viewport * Projection * ModelView * homoVec(world_coord)));
+    }
+
+    bool fragment(Vec3f factor, TGAColor &desColor){
+        desColor = TGAColor(0, 0, 0);
+        return false;
+    }
+
+    void sort() {
+        //y increase by 0,1,2(col index)
+        if (varing_pos[1][0] > varing_pos[1][1]) {
+            varing_pos.swap_col(0, 1);
+
+        }
+        if (varing_pos[1][0] > varing_pos[1][2]) {
+            varing_pos.swap_col(0, 2);
+        }
+        if (varing_pos[1][1] > varing_pos[1][2]) {
+            varing_pos.swap_col(1, 2);
+        }
+    }
+};
+
 class AOshader : public Ishader {
 public:
     mat<2, 3, float> varying_uv;
@@ -374,6 +404,50 @@ void computeAmbientMap()
     model->loadAmbient("occlusion.tga");
 }
 
+float max_elevation_angle(float *zbuffer, Vec2f p, Vec2f dir) {
+    float maxangle = 0;
+    for (float t=0.; t<1000.; t+=1.) {
+        Vec2f cur = p + dir*t;
+        if (cur.x>=width || cur.y>=height || cur.x<0 || cur.y<0) return maxangle;
+
+        float distance = (p-cur).norm();
+        if (distance < 1.f) continue;
+        float elevation = zbuffer[int(cur.x)+int(cur.y)*width]-zbuffer[int(p.x)+int(p.y)*width];
+        maxangle = std::max(maxangle, atanf(elevation/distance));
+    }
+    return maxangle;
+}
+
+void computeSSAO(){
+    TGAImage depthImage(width, height, TGAImage::RGB);
+    ZShader zshader;
+    for (int i=0; i<model->nfaces(); i++) {
+        for (int j=0; j<3; j++) {
+            zshader.vertex(i, j);
+        }
+        zshader.sort();
+        rasterization(depthImage, zbuffer, zshader);
+    }
+
+    //depthImage.write_tga_file("SSAO.tga");
+
+    for (int x=0; x<width; x++) {
+        for (int y=0; y<height; y++) {
+            if (zbuffer[x+y*width] < -1e5) continue;
+            float total = 0;
+            for (float a=0; a<M_PI*2-1e-4; a += M_PI/4) {
+                total += M_PI/2 - max_elevation_angle(zbuffer, Vec2f(x, y), Vec2f(cos(a), sin(a)));
+            }
+            total /= (M_PI/2)*8;
+            total = pow(total, 100.f);
+            depthImage.set(x, y, TGAColor(total*255, total*255, total*255));
+        }
+    }
+    depthImage.flip_vertically();
+    depthImage.write_tga_file("SSAO.tga");
+}
+
+
 
 int main(int argc, char** argv)
 {
@@ -397,48 +471,15 @@ int main(int argc, char** argv)
     model->loadNoraml("obj/diablo3_pose/diablo3_pose_nm_tangent.tga");
 #endif
 
-    computeAmbientMap();
+    //computeAmbientMap();
     eye = Vec3f(1, 1, 5);
     up = Vec3f(0, 1, 0);
-    resetZbfShadowBf();
-    depthImage.clear();
 
-    //计算阴影
-    lookat(light_dir, center, up);
-    viewport(0, 0, width, height);
-    Projection = Matrix::identity();
-
-    Matrix M = Viewport * Projection * ModelView;
-
-    depthShader dShader;
-    for (int i = 0; i < model->nfaces(); i++) {
-        for (int j = 0; j < 3; j++) {
-            dShader.vertex(i, j);
-        }
-        dShader.sort();
-        rasterization(depthImage, shadowBuffer, dShader);
-    }
-
-    depthImage.flip_vertically();
-    depthImage.write_tga_file("renDepthImage.tga");
-    std::cout << "Finish writing depth image.\n";
-
-    //常规渲图
     lookat(eye, center, up);
     viewport(0, 0, width, height);
     projection(eye, center);
-    phongShader shader(Projection * ModelView, (Projection*ModelView).invert_transpose(),M * (Viewport * Projection * ModelView).invert());
-    for (int i = 0; i < model->nfaces(); i++) {
-        for (int j = 0; j < 3; j++) {
-            shader.vertex(i, j);
-        }
-        shader.sort();
-        rasterization(scene, zbuffer, shader);
-    }
 
-    scene.flip_vertically();
-    scene.write_tga_file("output.tga");
-
+    computeSSAO();
 
     delete[] zbuffer;
     delete[] shadowBuffer;
